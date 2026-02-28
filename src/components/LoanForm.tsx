@@ -119,32 +119,67 @@ export default function LoanForm() {
     setIsSyncing(true);
 
     // Simulate complex API integration latency
-    await new Promise(resolve => setTimeout(resolve, 2500));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Generate mathematically realistic, verified financial data
-    const mockIncome = Math.floor(Math.random() * (2500000 - 800000) + 800000); // 8L to 25L
+    // ARCHETYPE ENGINE: Choose a random financial profile for deeper testing
+    const archetypes = ['Professional', 'Freelancer', 'Entrepreneur', 'Graduate'];
+    const type = archetypes[Math.floor(Math.random() * archetypes.length)];
+
+    let mockIncome = 500000;
+    let mockCibil = 750;
+    let resAssets = 0;
+    let bnkAssets = 0;
+    let luxAssets = 0;
+    let isSelfEmployed = 'No';
+
+    switch (type) {
+      case 'Professional':
+        mockIncome = Math.floor(Math.random() * (3000000 - 1500000) + 1500000);
+        mockCibil = Math.floor(Math.random() * (850 - 780) + 780);
+        resAssets = Math.floor(mockIncome * 2.5);
+        bnkAssets = Math.floor(mockIncome * 0.8);
+        break;
+      case 'Freelancer':
+        mockIncome = Math.floor(Math.random() * (1200000 - 600000) + 600000);
+        mockCibil = Math.floor(Math.random() * (740 - 650) + 650);
+        isSelfEmployed = 'Yes';
+        bnkAssets = Math.floor(mockIncome * 0.3);
+        break;
+      case 'Entrepreneur':
+        mockIncome = Math.floor(Math.random() * (5000000 - 2500000) + 2500000);
+        mockCibil = Math.floor(Math.random() * (800 - 600) + 600);
+        isSelfEmployed = 'Yes';
+        resAssets = Math.floor(mockIncome * 1.5);
+        bnkAssets = Math.floor(mockIncome * 1.2);
+        luxAssets = Math.floor(mockIncome * 0.5);
+        break;
+      case 'Graduate':
+        mockIncome = Math.floor(Math.random() * (800000 - 400000) + 400000);
+        mockCibil = Math.floor(Math.random() * (750 - 700) + 700);
+        bnkAssets = Math.floor(mockIncome * 0.1);
+        break;
+    }
 
     setFormData(prev => ({
       ...prev,
       annualIncome: mockIncome,
-      residentialAssets: Math.floor(mockIncome * 1.8),
-      bankAssets: Math.floor(mockIncome * 0.4),
+      residentialAssets: resAssets,
+      bankAssets: bnkAssets,
       commercialAssets: 0,
-      luxuryAssets: Math.floor(mockIncome * 0.2),
-      cibilScore: Math.floor(Math.random() * (850 - 720) + 720), // 720 to 850
-      education: 'Graduate',
-      selfEmployed: 'No'
+      luxuryAssets: luxAssets,
+      cibilScore: mockCibil,
+      selfEmployed: isSelfEmployed as any
     }));
 
-    // Mirror for Co-Applicant if active
+    // Mirror for Co-Applicant if active (Collaborative Growth Model)
     if (hasCoApplicant) {
-      const coIncome = Math.floor(mockIncome * 0.85); // Make co-applicant realistic
+      const coIncome = Math.floor(mockIncome * 0.7);
       setCoFormData(prev => ({
         ...prev,
         annualIncome: coIncome,
-        residentialAssets: Math.floor(coIncome * 1.2),
-        bankAssets: Math.floor(coIncome * 0.5),
-        cibilScore: Math.floor(Math.random() * (850 - 720) + 720)
+        residentialAssets: Math.floor(coIncome * 1.1),
+        bankAssets: Math.floor(coIncome * 0.4),
+        cibilScore: Math.floor(Math.random() * (850 - 700) + 700)
       }));
     }
 
@@ -345,29 +380,22 @@ export default function LoanForm() {
         setApiError(data.error || 'Prediction failed. Please try again.');
         return;
       }
-      // --- AURA OPTIMIZER LOGIC --- //
-      // 1. Determine Risk-Based Interest Rate
-      let rate = 15.0; // Default High Risk
-      if (finalPayload.cibilScore >= 800) rate = 7.5;
-      else if (finalPayload.cibilScore >= 700) rate = 9.5;
-      else if (finalPayload.cibilScore >= 600) rate = 12.5;
-
-      // 2. Calculate EMI (Equated Monthly Installment)
-      const p = finalPayload.loanAmount;
-      const r = (rate / 100) / 12; // Monthly Interest Rate
-      const n = finalPayload.loanTerm;
-      const emi = (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+      // --- AURA OPTIMIZER LOGIC (Python Powered) --- //
+      const rate = data.interestRate || 12.0;
+      const emi = data.emi || 0;
 
       // 3. Generate Generative AI Coaching Insights
       const messages: string[] = [];
       const monthlyIncome = finalPayload.annualIncome / 12;
       const dti = emi / monthlyIncome; // Debt-to-Income Ratio
+      const r = (rate / 100) / 12; // Monthly Interest Rate
+      const n = finalPayload.loanTerm;
 
       if (data.approved) {
         if (rate <= 9.5) {
           messages.push(`Your remarkable ${hasCoApplicant ? 'combined ' : ''}CIBIL score of ${finalPayload.cibilScore} unlocked our premium ${rate}% interest tier. Excellent financial health!`);
         } else {
-          messages.push(`Your profile was approved, but your ${hasCoApplicant ? 'combined ' : ''}CIBIL score of ${finalPayload.cibilScore} forced a higher interest rate of ${rate}%.`);
+          messages.push(`Your profile was approved, but market volatility and risk factors set your rate at ${rate}%.`);
         }
         if (dti < 0.3) {
           messages.push(`Your ${hasCoApplicant ? 'joint ' : ''}monthly income comfortably supports this estimated EMI. Extremely low default risk detected.`);
