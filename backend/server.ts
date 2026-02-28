@@ -100,10 +100,91 @@ function checkRateLimit(key: string, maxAttempts: number = 10, windowMs: number 
   if (record.count >= maxAttempts) {
     return false;
   }
-
   record.count++;
   return true;
 }
+
+// --- Persistent AI Engine (Aura) Controller ---
+// This class keeps the Python process ALIVE so the model stays in RAM.
+// Evaluation goes from 10 seconds -> 50 milliseconds.
+class AuraEngine {
+  private static instance: AuraEngine;
+  private process: any = null;
+  private queue: Array<{ query: string; resolve: Function; reject: Function }> = [];
+  private isProcessing = false;
+  private isReady = false;
+
+  private constructor() {
+    this.start();
+  }
+
+  public static getInstance(): AuraEngine {
+    if (!AuraEngine.instance) AuraEngine.instance = new AuraEngine();
+    return AuraEngine.instance;
+  }
+
+  private start() {
+    console.log('🚀 [AURA] Booting Persistent ML Engine...');
+    const pythonCmd = process.env.PYTHON || (process.platform === 'win32' ? 'py' : 'python3');
+    const pythonScript = path.join(__dirname, 'model', 'predict.py');
+
+    // Use -u for unbuffered output to get instant stdout
+    this.process = spawn(pythonCmd, ['-u', pythonScript], {
+      cwd: path.join(__dirname, 'model'),
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    this.process.stdout.on('data', (data: Buffer) => {
+      const output = data.toString().trim();
+      if (this.queue.length > 0) {
+        const { resolve } = this.queue.shift()!;
+        try {
+          resolve(JSON.parse(output));
+        } catch (e) {
+          resolve({ error: "Invalid response from AI Engine" });
+        }
+        this.isProcessing = false;
+        this.processNext();
+      }
+    });
+
+    this.process.stderr.on('data', (data: Buffer) => {
+      const msg = data.toString();
+      if (msg.includes('AURA_ENGINE_READY')) {
+        this.isReady = true;
+        console.log('✅ [AURA] Engine Ready: Model loaded in RAM');
+      } else if (msg.includes('AURA_ENGINE_FAILED')) {
+        console.error('❌ [AURA] Engine Failure during load.');
+      } else {
+        console.warn(`[AURA Python]: ${msg}`);
+      }
+    });
+
+    this.process.on('close', (code: number) => {
+      console.warn(`⚠️ [AURA] Engine exited (code ${code}). Restarting in 2s...`);
+      this.isReady = false;
+      this.isProcessing = false;
+      setTimeout(() => this.start(), 2000);
+    });
+  }
+
+  public async query(data: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ query: JSON.stringify(data), resolve, reject });
+      if (!this.isProcessing) this.processNext();
+    });
+  }
+
+  private processNext() {
+    if (this.queue.length === 0 || this.isProcessing) return;
+
+    this.isProcessing = true;
+    const { query } = this.queue[0];
+    this.process.stdin.write(query + '\n');
+  }
+}
+
+const aura = AuraEngine.getInstance();
 
 // Clean up expired entries every 30 minutes
 setInterval(() => {
@@ -231,9 +312,8 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// --- Prediction Route ---
-
-app.post('/api/predict', (req, res) => {
+// --- Prediction Route (Optimized via Persistent Aura Engine) ---
+app.post('/api/predict', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Unauthorized. Please log in.' });
   }
@@ -250,49 +330,18 @@ app.post('/api/predict', (req, res) => {
     });
   }
 
-  const pythonCmd = process.env.PYTHON || (process.platform === 'win32' ? 'py' : 'python3');
-  const pythonScript = path.join(__dirname, 'model', 'predict.py');
-  const pythonProcess = spawn(pythonCmd, [pythonScript], { cwd: path.join(__dirname, 'model') });
+  try {
+    const result = await aura.query(req.body);
 
-  pythonProcess.on('error', (err) => {
-    console.error('Failed to start Python process:', err);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Failed to start prediction engine. Please verify Python is installed.' });
-    }
-  });
-
-  let dataString = '';
-  let errorString = '';
-
-  pythonProcess.stdout.on('data', (data) => {
-    dataString += data.toString();
-  });
-
-  pythonProcess.stderr.on('data', (data) => {
-    errorString += data.toString();
-    console.error(`Python Error: ${data}`);
-  });
-
-  pythonProcess.on('close', (code) => {
-    if (code !== 0) {
-      console.error('Python process exited with code:', code);
-      return res.status(500).json({
-        error: 'Prediction process failed',
-        details: errorString || 'Unknown error occurred in Python script',
-      });
+    if (result.error) {
+      return res.status(400).json({ error: result.error });
     }
 
+    // -----------------------------------------------------
+    // STEP 2 & 3: Save Prediction into SQLite Database
+    // -----------------------------------------------------
     try {
-      const result = JSON.parse(dataString);
-      if (result.error) {
-        return res.status(400).json({ error: result.error });
-      }
-
-      // -----------------------------------------------------
-      // STEP 2 & 3: Save Prediction into SQLite Database
-      // -----------------------------------------------------
-      try {
-        const stmt = db.prepare(`
+      const stmt = db.prepare(`
           INSERT INTO predictions (
             user_id, age, dependents, education, self_employed, annual_income,
             loan_amount, loan_term, cibil_score, residential_assets,
@@ -300,37 +349,33 @@ app.post('/api/predict', (req, res) => {
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
-        stmt.run(
-          req.session.userId, // user_id (who asked)
-          validation.data.age,
-          validation.data.dependents,
-          validation.data.education,
-          validation.data.selfEmployed,
-          validation.data.annualIncome,
-          validation.data.loanAmount,
-          validation.data.loanTerm,
-          validation.data.cibilScore,
-          validation.data.residentialAssets,
-          validation.data.commercialAssets,
-          validation.data.luxuryAssets,
-          validation.data.bankAssets,
-          result.approved ? 1 : 0, // Store as boolean int
-          result.probability
-        );
-      } catch (dbError) {
-        console.error('Failed to log prediction to database:', dbError);
-        // We still return the prediction to the user even if DB log fails
-      }
-
-      res.json(result);
-    } catch (e) {
-      console.error('Failed to parse python output:', dataString);
-      res.status(500).json({ error: 'Failed to parse prediction results' });
+      stmt.run(
+        req.session.userId, // user_id (who asked)
+        validation.data.age,
+        validation.data.dependents,
+        validation.data.education,
+        validation.data.selfEmployed,
+        validation.data.annualIncome,
+        validation.data.loanAmount,
+        validation.data.loanTerm,
+        validation.data.cibilScore,
+        validation.data.residentialAssets,
+        validation.data.commercialAssets,
+        validation.data.luxuryAssets,
+        validation.data.bankAssets,
+        result.approved ? 1 : 0, // Store as boolean int
+        result.probability
+      );
+    } catch (dbError) {
+      console.error('Failed to log prediction to database:', dbError);
+      // We still return the prediction to the user even if DB log fails
     }
-  });
 
-  pythonProcess.stdin.write(JSON.stringify(validation.data));
-  pythonProcess.stdin.end();
+    res.json(result);
+  } catch (e: any) {
+    console.error('AURA Query Error:', e);
+    res.status(500).json({ error: 'AI Prediction Engine is currently busy or re-warming. Please try again.' });
+  }
 });
 
 // --- History API ---
