@@ -93,37 +93,43 @@ def predict():
         # Assuming target 'loan_status' was encoded as 1=Approved, 0=Rejected
         is_approved = bool(prediction[0] == 1)
 
-        # --- Financial Optimization Engine (Improvised Logic) ---
-        # 1. Dynamic Interest Rate Calculation
-        # Base rate 12.0%
-        rate = 12.0
-        
-        # Cibil Logic (Significant impact)
-        cibil = int(data.get('cibilScore', 0))
-        if cibil >= 800: rate -= 4.0
-        elif cibil >= 750: rate -= 3.0
-        elif cibil >= 700: rate -= 2.0
-        elif cibil >= 650: rate -= 1.0
-        
-        # Asset/Income Logic (Capacity impact)
+        # --- Financial Optimization Engine v2.5 (Continuous Granularity) ---
+        # 1. Continuous Rate calculation
+        # Map CIBIL linearly: 300 to 900 -> 18% down to 6.5%
+        cibil = int(data.get('cibilScore', 750))
+        cibil_factor = (max(min(cibil, 900), 300) - 300) / 600
+        rate = 18.0 - (cibil_factor * 11.0) # Base Scale (18% - 7%)
+
+        # 2. Capacity & Risk Modifiers
         income = int(data.get('annualIncome', 0))
         loan = int(data.get('loanAmount', 0))
-        if (income / max(loan, 1)) > 3: rate -= 0.5 # High coverage
+        term = int(data.get('loanTerm', 12))
         
-        # Term Penalty (Duration risk)
-        term = int(data.get('loanTerm', 0))
-        if term > 60: rate += 0.5
+        # Debt-to-Income (DTI) Bonus: Reward low leverage
+        if income > 0 and loan > 0:
+            dti = loan / income
+            if dti < 0.2: rate -= 0.5
+            elif dti > 1.0: rate += 1.0
         
-        # Employment Type
-        if data.get('selfEmployed') == 'No': rate -= 0.5 # Salaried stability bonus
+        # Tenure Adjustment
+        if term > 48: rate += (term - 48) * 0.01
 
-        # Cap the rate between 6.5% and 18.0%
-        rate = max(6.5, min(18.0, rate))
+        # Stable Employment Discount
+        if data.get('selfEmployed') == 'No': rate -= 0.25
 
-        # 2. EMI Calculation
+        # 3. Precision Jitter (Personalization Aura)
+        # Unique ±0.1% shift based on applicant data hash
+        seed_val = hash(f"{income}{loan}{cibil}{term}") % 1000
+        random.seed(seed_val)
+        rate += random.uniform(-0.1, 0.1)
+
+        # Safety Guards
+        rate = max(6.49, min(23.99, rate))
+
+        # 4. EMI Calculation (Standard Amortization)
         p = loan
         r = (rate / 100) / 12
-        n = term if term > 0 else 1 # Avoid division by zero
+        n = term if term > 0 else 1
         if r > 0:
             emi = (p * r * ((1 + r) ** n)) / (((1 + r) ** n) - 1)
         else:

@@ -131,6 +131,8 @@ export default function LoanForm() {
     let bnkAssets = 0;
     let luxAssets = 0;
     let isSelfEmployed = 'No';
+    let mockLoan = 200000; // Default
+    let mockTerm = 12;     // Default
 
     switch (type) {
       case 'Professional':
@@ -138,12 +140,16 @@ export default function LoanForm() {
         mockCibil = Math.floor(Math.random() * (850 - 780) + 780);
         resAssets = Math.floor(mockIncome * 2.5);
         bnkAssets = Math.floor(mockIncome * 0.8);
+        mockLoan = Math.floor(Math.random() * (1500000 - 500000) + 500000);
+        mockTerm = [12, 24, 36, 48, 60][Math.floor(Math.random() * 5)];
         break;
       case 'Freelancer':
         mockIncome = Math.floor(Math.random() * (1200000 - 600000) + 600000);
         mockCibil = Math.floor(Math.random() * (740 - 650) + 650);
         isSelfEmployed = 'Yes';
         bnkAssets = Math.floor(mockIncome * 0.3);
+        mockLoan = Math.floor(Math.random() * (500000 - 100000) + 100000);
+        mockTerm = [12, 24, 36][Math.floor(Math.random() * 3)];
         break;
       case 'Entrepreneur':
         mockIncome = Math.floor(Math.random() * (5000000 - 2500000) + 2500000);
@@ -152,17 +158,23 @@ export default function LoanForm() {
         resAssets = Math.floor(mockIncome * 1.5);
         bnkAssets = Math.floor(mockIncome * 1.2);
         luxAssets = Math.floor(mockIncome * 0.5);
+        mockLoan = Math.floor(Math.random() * (3000000 - 1000000) + 1000000);
+        mockTerm = [24, 36, 48, 60, 84][Math.floor(Math.random() * 5)];
         break;
       case 'Graduate':
         mockIncome = Math.floor(Math.random() * (800000 - 400000) + 400000);
         mockCibil = Math.floor(Math.random() * (750 - 700) + 700);
         bnkAssets = Math.floor(mockIncome * 0.1);
+        mockLoan = Math.floor(Math.random() * (300000 - 50000) + 50000);
+        mockTerm = [12, 24, 36][Math.floor(Math.random() * 3)];
         break;
     }
 
     setFormData(prev => ({
       ...prev,
       annualIncome: mockIncome,
+      loanAmount: mockLoan,
+      loanTerm: mockTerm,
       residentialAssets: resAssets,
       bankAssets: bnkAssets,
       commercialAssets: 0,
