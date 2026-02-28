@@ -135,11 +135,12 @@ export default function HistoryPage() {
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={analytics.cibilChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                                            <XAxis dataKey="name" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} />
-                                            <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} />
+                                            <XAxis dataKey="name" stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                                            <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} />
                                             <Tooltip
                                                 cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', color: '#f8fafc' }}
+                                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                                                itemStyle={{ color: '#f8fafc' }}
                                             />
                                             <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                                             <Bar dataKey="Approved" stackId="a" fill="#10b981" radius={[0, 0, 4, 4]} />
@@ -165,8 +166,19 @@ export default function HistoryPage() {
                                                 paddingAngle={5}
                                                 dataKey="value"
                                                 nameKey="name"
-                                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                                labelLine={false}
+                                                label={({ cx, cy, x, y, midAngle, innerRadius, outerRadius, name, percent }) => {
+                                                    const RADIAN = Math.PI / 180;
+                                                    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                                                    const lx = cx + (outerRadius + 30) * Math.cos(-midAngle * RADIAN);
+                                                    const ly = cy + (outerRadius + 30) * Math.sin(-midAngle * RADIAN);
+
+                                                    return (
+                                                        <text x={lx} y={ly} fill="#f8fafc" textAnchor={lx > cx ? 'start' : 'end'} dominantBaseline="central" className="text-[10px] sm:text-xs font-bold">
+                                                            {`${name} ${(percent * 100).toFixed(0)}%`}
+                                                        </text>
+                                                    );
+                                                }}
+                                                labelLine={{ stroke: '#64748b' }}
                                             >
                                                 {analytics.employmentPieData?.map((entry: any, index: number) => (
                                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -174,7 +186,8 @@ export default function HistoryPage() {
                                             </Pie>
                                             <Tooltip
                                                 formatter={(value: number) => `₹${value.toLocaleString()}`}
-                                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', color: '#f8fafc' }}
+                                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                                                itemStyle={{ color: '#f8fafc' }}
                                             />
                                         </PieChart>
                                     </ResponsiveContainer>
