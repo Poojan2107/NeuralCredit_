@@ -154,7 +154,7 @@ export default function HistoryPage() {
                             <div className="bento-card p-6">
                                 <div className="flex items-center gap-2 mb-6">
                                     <PieChartIcon className="h-5 w-5 text-indigo-400" />
-                                    <h3 className="text-lg font-semibold text-slate-200">Average Loan (Employment Distribution)</h3>
+                                    <h3 className="text-lg font-semibold text-slate-200">Application Volume (Employment Tier)</h3>
                                 </div>
                                 <div className="h-64 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -185,7 +185,7 @@ export default function HistoryPage() {
                                                 ))}
                                             </Pie>
                                             <Tooltip
-                                                formatter={(value: number) => `₹${value.toLocaleString()}`}
+                                                formatter={(value: number) => `${value.toLocaleString()} Apps`}
                                                 contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
                                                 itemStyle={{ color: '#f8fafc' }}
                                             />

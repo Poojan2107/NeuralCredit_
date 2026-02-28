@@ -9,6 +9,9 @@
     "start": "tsx backend/server.ts",
     "render-build": "npm install && npm run build && pip install -r backend/model/requirements.txt",
     "retrain": "cd backend/model && python train.py",
+    "seed": "tsx backend/seed.ts",
+    "seed-ai": "python backend/model/seed_ai.py",
+    "reset-db": "npm run seed && npm run seed-ai",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"

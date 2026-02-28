@@ -385,11 +385,11 @@ app.get('/api/analytics', (req, res) => {
       ORDER BY tier DESC
     `).all();
 
-    // Average loan size by Employment Type
+    // Count by Employment Type (for Pie Chart distribution)
     const employmentStats = db.prepare(`
       SELECT 
         self_employed as type,
-        AVG(loan_amount) as avg_loan
+        COUNT(*) as count
       FROM predictions
       GROUP BY self_employed
     `).all();
@@ -403,7 +403,7 @@ app.get('/api/analytics', (req, res) => {
 
     const employmentData = employmentStats.map((row: any) => ({
       name: row.type === 'Yes' ? 'Self Employed' : 'Salaried',
-      value: row.avg_loan
+      value: row.count
     }));
 
     res.json({
