@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  CheckCircle, XCircle, Calculator, DollarSign, Briefcase,
+  CheckCircle, XCircle, Calculator, IndianRupee, Briefcase,
   GraduationCap, Users, Clock, Activity, Building2, Gem,
   Landmark, AlertTriangle, ChevronRight, Cpu, Brain,
   TrendingDown, TrendingUp, Lightbulb, Target, ShieldCheck, Link, Lock, Building, RefreshCw,
@@ -232,12 +232,12 @@ export default function LoanForm() {
     // Financial Details Table
     const currentPayload = result.finalPayload || formData;
     const tableData = [
-      ["Approved Loan Amount", `Rs. ${currentPayload.loanAmount.toLocaleString()}`],
+      ["Approved Loan Amount", `₹ ${currentPayload.loanAmount.toLocaleString('en-IN')}`],
       ["Approved Tenure", `${currentPayload.loanTerm} Months`],
       ["Risk-Based Interest Rate", `${result.insights.interestRate}% p.a.`],
-      ["Equated Monthly Installment (EMI)", `Rs. ${Math.floor(result.insights.emi).toLocaleString()}/month`],
+      ["Equated Monthly Installment (EMI)", `₹ ${Math.floor(result.insights.emi).toLocaleString('en-IN')}/month`],
       ["Verified Applicant CIBIL Score", currentPayload.cibilScore.toString()],
-      ["Verified Annual Income", `Rs. ${currentPayload.annualIncome.toLocaleString()}`]
+      ["Verified Annual Income", `₹ ${currentPayload.annualIncome.toLocaleString('en-IN')}`]
     ];
 
     try {
@@ -415,7 +415,7 @@ export default function LoanForm() {
       } else {
         if (dti > 0.4) {
           const recommendedMax = (monthlyIncome * 0.4) / (r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1));
-          messages.push(`Your Debt-to-Income ratio exceeds 40%. Lowering your requested loan amount to under ₹${Math.floor(recommendedMax).toLocaleString()} or extending the term will drastically improve approval odds.`);
+          messages.push(`Your Debt-to-Income ratio exceeds 40%. Lowering your requested loan amount to under ₹${Math.floor(recommendedMax).toLocaleString('en-IN')} or extending the term will drastically improve approval odds.`);
         }
         if (finalPayload.cibilScore < 650) {
           messages.push(`Your ${hasCoApplicant ? 'combined ' : ''}CIBIL score is below our safe lending threshold. Paying down existing credit cards to boost your score by 50-100 points is highly recommended before re-applying.`);
@@ -535,7 +535,7 @@ export default function LoanForm() {
             <h2 className="text-lg font-semibold text-slate-200">Financial Request</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <FieldInput label="Annual Income (₹)" name="annualIncome" value={formData.annualIncome} icon={DollarSign} error={fieldErrors.annualIncome} onChange={handleChange} placeholder="e.g. 500000" />
+            <FieldInput label="Annual Income (₹)" name="annualIncome" value={formData.annualIncome} icon={IndianRupee} error={fieldErrors.annualIncome} onChange={handleChange} placeholder="e.g. 500000" />
             <FieldInput label="Loan Amount (₹)" name="loanAmount" value={formData.loanAmount} icon={Calculator} error={fieldErrors.loanAmount} onChange={handleChange} placeholder="e.g. 200000" />
             <div className="sm:col-span-2">
               <FieldInput label="Loan Term (Months)" name="loanTerm" value={formData.loanTerm} icon={Clock} error={fieldErrors.loanTerm} onChange={handleChange} placeholder="Duration (e.g. 12)" />
@@ -626,7 +626,7 @@ export default function LoanForm() {
                   <h2 className="text-lg font-semibold text-slate-200">Secondary Financials</h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <FieldInput label="Aggregated Income (₹)" name="annualIncome" value={coFormData.annualIncome} icon={DollarSign} onChange={handleCoChange} />
+                  <FieldInput label="Aggregated Income (₹)" name="annualIncome" value={coFormData.annualIncome} icon={IndianRupee} onChange={handleCoChange} />
                   <FieldInput label="CIBIL Score" name="cibilScore" value={coFormData.cibilScore} icon={Activity} onChange={handleCoChange} />
                   <FieldInput label="Res. Assets (₹)" name="residentialAssets" value={coFormData.residentialAssets} icon={Building2} onChange={handleCoChange} />
                   <FieldInput label="Bank Assets (₹)" name="bankAssets" value={coFormData.bankAssets} icon={Landmark} onChange={handleCoChange} />
@@ -792,8 +792,8 @@ export default function LoanForm() {
                   <div className="bg-black/20 p-4 rounded-xl border border-white/5">
                     <div className="text-xs text-slate-400 font-mono mb-1">Estimated EMI</div>
                     <div className="text-2xl font-bold text-white flex items-center gap-1">
-                      <DollarSign className="h-5 w-5 text-indigo-400" />
-                      {Math.floor(result.insights.emi).toLocaleString()} <span className="text-sm font-normal text-slate-500">/mo</span>
+                      <IndianRupee className="h-5 w-5 text-indigo-400" />
+                      {Math.floor(result.insights.emi).toLocaleString('en-IN')} <span className="text-sm font-normal text-slate-500">/mo</span>
                     </div>
                   </div>
                   <div className="bg-black/20 p-4 rounded-xl border border-white/5 flex justify-between items-center">

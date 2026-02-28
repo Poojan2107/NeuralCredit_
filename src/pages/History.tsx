@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
-import { Database, Activity, Shield, Trash2, Calendar, DollarSign, BrainCircuit, BarChart2, PieChart as PieChartIcon, CheckCircle, XCircle, Download } from 'lucide-react';
+import { Database, Activity, Shield, Trash2, Calendar, IndianRupee, BrainCircuit, BarChart2, PieChart as PieChartIcon, CheckCircle, XCircle, Download } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -185,7 +185,7 @@ export default function HistoryPage() {
                                                 ))}
                                             </Pie>
                                             <Tooltip
-                                                formatter={(value: number) => `${value.toLocaleString()} Apps`}
+                                                formatter={(value: number) => `${value.toLocaleString('en-IN')} Apps`}
                                                 contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
                                                 itemStyle={{ color: '#f8fafc' }}
                                             />
@@ -288,7 +288,7 @@ export default function HistoryPage() {
                                             <td className="py-4 px-6 text-slate-300 text-sm">
                                                 <div className="flex items-center gap-4">
                                                     <div className="flex items-center gap-1" title="Loan Amount">
-                                                        <DollarSign className="h-3.5 w-3.5 text-slate-500" />
+                                                        <IndianRupee className="h-3.5 w-3.5 text-slate-500" />
                                                         {(record.loan_amount / 1000).toFixed(0)}k
                                                     </div>
                                                     <div className="flex items-center gap-1" title="CIBIL Score">
