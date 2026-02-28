@@ -192,7 +192,7 @@ export default function LoanForm() {
       ["Verified Annual Income", `Rs. ${currentPayload.annualIncome.toLocaleString()}`]
     ];
 
-    autoTable(doc, {
+    (doc as any).autoTable({
       startY: 85,
       head: [['Sanction Detail', 'Authorized Value']],
       body: tableData,
