@@ -9,7 +9,8 @@ import {
   Download, FileText, WifiOff, UserPlus, Terminal
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import autoTable, { applyPlugin } from 'jspdf-autotable';
+applyPlugin(jsPDF);
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
 // --- Zod Validation Schema ---
@@ -192,25 +193,38 @@ export default function LoanForm() {
       ["Verified Annual Income", `Rs. ${currentPayload.annualIncome.toLocaleString()}`]
     ];
 
-    (doc as any).autoTable({
-      startY: 85,
-      head: [['Sanction Detail', 'Authorized Value']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [79, 70, 229], textColor: 255 },
-      styles: { fontSize: 10, cellPadding: 5 }
-    });
+    try {
+      console.log('Generating PDF with autoTable...', { tableData });
+      autoTable(doc, {
+        startY: 85,
+        head: [['Sanction Detail', 'Authorized Value']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [79, 70, 229], textColor: 255 },
+        styles: { fontSize: 10, cellPadding: 5 }
+      });
+    } catch (atError) {
+      console.error('autoTable failed:', atError);
+      // Fallback: draw a simple line if autoTable fails completely
+      doc.text("Table generation failed. Manual check required.", 20, 90);
+    }
 
     // Signatures
-    const finalY = (doc as any).lastAutoTable.finalY + 20;
+    let finalY = 200; // Default fallback
+    try {
+      finalY = (doc as any).lastAutoTable?.finalY || 200;
+    } catch (e) {
+      console.warn('Could not determine lastAutoTable.finalY', e);
+    }
+
     doc.setFontSize(10);
-    doc.text("System Authorized By:", 20, finalY);
+    doc.text("System Authorized By:", 20, finalY + 20);
     doc.setFont("courier", "italic");
-    doc.text("NeuralCredit_ AI Engine v2.1", 20, finalY + 10);
+    doc.text("NeuralCredit_ AI Engine v2.1", 20, finalY + 30);
     doc.setFont("helvetica", "normal");
 
-    doc.text("Applicant Signature:", 140, finalY);
-    doc.text("_________________________", 140, finalY + 10);
+    doc.text("Applicant Signature:", 140, finalY + 20);
+    doc.text("_________________________", 140, finalY + 30);
 
     // Footer
     doc.setFontSize(8);
