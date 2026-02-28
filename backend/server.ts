@@ -13,6 +13,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = 3000;
 
+// Required for secure cookies on Render/Heroku proxy
+app.set('trust proxy', 1);
+
 // Database Setup
 const db = new Database('backend/database.db');
 db.pragma('journal_mode = WAL');
@@ -63,8 +66,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   session({
     secret: process.env.SESSION_SECRET || 'loan-prediction-secret-key',
-    resave: false,
-    saveUninitialized: false,
+    resave: true,
+    saveUninitialized: true,
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
