@@ -8,6 +8,7 @@
     "build": "vite build",
     "start": "tsx backend/server.ts",
     "render-build": "npm install && npm run build && pip install -r backend/model/requirements.txt",
+    "retrain": "cd backend/model && python train.py",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"

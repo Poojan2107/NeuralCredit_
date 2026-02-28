@@ -251,6 +251,10 @@ app.post('/api/predict', (req, res) => {
   const pythonScript = path.join(__dirname, 'model', 'predict.py');
   const pythonProcess = spawn(pythonCmd, [pythonScript], { cwd: path.join(__dirname, 'model') });
 
+  // CRITICAL: We must write the request body to the Python process stdin
+  pythonProcess.stdin.write(JSON.stringify(req.body));
+  pythonProcess.stdin.end();
+
   pythonProcess.on('error', (err) => {
     console.error('Failed to start Python process:', err);
     if (!res.headersSent) {
