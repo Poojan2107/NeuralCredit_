@@ -1,8 +1,25 @@
+import { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
 import LoanForm from '../components/LoanForm';
-import { Shield, Brain, TrendingUp } from 'lucide-react';
+import { Shield, Brain, TrendingUp, Activity } from 'lucide-react';
+
+interface Stats {
+  total: number;
+  approvalRate: string;
+  avgConfidence: string;
+  status: string;
+}
 
 export default function Dashboard() {
+  const [stats, setStats] = useState<Stats | null>(null);
+
+  useEffect(() => {
+    fetch('/api/model/stats')
+      .then(res => res.json())
+      .then(data => setStats(data))
+      .catch(err => console.error('Stats fetch error:', err));
+  }, []);
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -11,8 +28,8 @@ export default function Dashboard() {
           {/* Hero Section - Geeky but polished */}
           <div className="text-center mb-16 animate-fade-in-up">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/50 border border-slate-700/50 text-indigo-400 text-xs font-mono mb-6">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              sys.status === 'ONLINE'
+              <span className={`w-2 h-2 rounded-full ${stats?.status === 'ONLINE' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
+              sys.status === '{stats?.status || 'WARMING'}'
             </div>
             <h1 className="text-4xl font-extrabold sm:text-5xl lg:text-6xl tracking-tight">
               <span className="text-white">Neural</span>
@@ -31,11 +48,15 @@ export default function Dashboard() {
               </div>
               <div className="bento-card flex items-center gap-2 px-4 py-2 rounded-full text-xs font-mono">
                 <TrendingUp className="h-4 w-4 text-emerald-400" />
-                <span className="text-slate-300">acc={95}</span>
+                <span className="text-slate-300">confidence={stats?.avgConfidence || '95.0'}%</span>
+              </div>
+              <div className="bento-card flex items-center gap-2 px-4 py-2 rounded-full text-xs font-mono">
+                <Activity className="h-4 w-4 text-cyan-400" />
+                <span className="text-slate-300">volume={stats?.total || 0}</span>
               </div>
               <div className="bento-card flex items-center gap-2 px-4 py-2 rounded-full text-xs font-mono">
                 <Shield className="h-4 w-4 text-amber-400" />
-                <span className="text-slate-300">sec=true</span>
+                <span className="text-slate-300">secure=true</span>
               </div>
             </div>
           </div>
@@ -47,7 +68,7 @@ export default function Dashboard() {
       <footer className="mt-16 py-8 border-t border-white/5 bg-slate-950/50 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-slate-400 text-sm font-mono">&copy; 2026 Loan Prediction Engine v2.0</p>
-          <p className="text-slate-500 text-xs mt-2 font-mono">Model Accuracy: 95% (Random Forest) · Data encrypted at rest.</p>
+          <p className="text-slate-500 text-xs mt-2 font-mono">Model Confidence: {stats?.avgConfidence || '95.0'}% (Aggregated Probability) · Data encrypted at rest.</p>
         </div>
       </footer>
     </div>

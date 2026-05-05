@@ -67,8 +67,10 @@ def process_request(model, line):
         if data.get('selfEmployed') == 'No': rate -= 0.25
 
         # Jitter
-        # Use a combination of inputs to ensure deterministic but unique jitter for same input
-        random.seed(hash(f"{income}{loan}{cibil}{term}") % 1000)
+        # Use a combination of inputs to ensure deterministic jitter across process restarts
+        import zlib
+        seed_str = f"{income}{loan}{cibil}{term}".encode()
+        random.seed(zlib.crc32(seed_str) & 0xffffffff)
         rate += random.uniform(-0.1, 0.1)
         rate = max(6.49, min(23.99, rate))
 

@@ -11,7 +11,8 @@ import { z } from 'zod';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3001;
+const SESSION_SECRET = process.env.SESSION_SECRET || 'aura-neural-credit-v2-hyper-secret';
 
 // Required for secure cookies on Render/Heroku proxy
 app.set('trust proxy', 1);
@@ -65,9 +66,9 @@ app.use(express.urlencoded({ extended: true }));
 // Session Configuration
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'loan-prediction-secret-key',
-    resave: true,
-    saveUninitialized: true,
+    secret: SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
@@ -75,6 +76,15 @@ app.use(
     },
   })
 );
+
+// Middleware to check authentication
+const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+  if (req.session.userId) {
+    next();
+  } else {
+    res.status(401).json({ error: 'Unauthorized. Please log in.' });
+  }
+};
 
 // Types for Session
 declare module 'express-session' {
@@ -112,7 +122,7 @@ class AuraEngine {
   private process: any = null;
   private queue: Array<{ query: string; resolve: Function; reject: Function }> = [];
   private isProcessing = false;
-  private isReady = false;
+  public isReady = false;
 
   private constructor() {
     this.start();
@@ -313,10 +323,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // --- Prediction Route (Optimized via Persistent Aura Engine) ---
-app.post('/api/predict', async (req, res) => {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: 'Unauthorized. Please log in.' });
-  }
+app.post('/api/predict', isAuthenticated, async (req, res) => {
 
   const ip = req.ip || 'unknown';
   if (!checkRateLimit(`predict:${ip}`, 30, 60 * 1000)) {
@@ -334,7 +341,11 @@ app.post('/api/predict', async (req, res) => {
     const result = await aura.query(req.body);
 
     if (result.error) {
-      return res.status(400).json({ error: result.error });
+      console.error('AI Engine logic error:', result.error);
+      return res.status(422).json({ 
+        error: 'Neural Logic Exception', 
+        details: 'The AI model could not process these parameters. Ensure financial values are realistic.' 
+      });
     }
 
     // -----------------------------------------------------
@@ -374,16 +385,15 @@ app.post('/api/predict', async (req, res) => {
     res.json(result);
   } catch (e: any) {
     console.error('AURA Query Error:', e);
-    res.status(500).json({ error: 'AI Prediction Engine is currently busy or re-warming. Please try again.' });
+    res.status(503).json({ 
+      error: 'AI Engine Warming Up', 
+      details: 'The Random Forest model is being reloaded into RAM. Please retry in 5 seconds.' 
+    });
   }
 });
 
 // --- History API ---
-app.get('/api/predictions/history', (req, res) => {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: 'Unauthorized. Please log in.' });
-  }
-
+app.get('/api/predictions/history', isAuthenticated, (req, res) => {
   try {
     // Fetch the 50 most recent predictions.
     // We include BOTH the user's personal predictions (user_id = ?) 
@@ -406,6 +416,22 @@ app.get('/api/predictions/history', (req, res) => {
 });
 
 // --- Analytics Data API ---
+app.post('/api/seed', (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Unauthorized. Please log in.' });
+  }
+
+  const { exec } = require('child_process');
+  
+  exec('npm run seed-ai', (error: any) => {
+    if (error) {
+      console.error('Seeding failed:', error);
+      return res.status(500).json({ error: 'Failed to inject traffic' });
+    }
+    res.json({ success: true, message: 'Injected historical applications.' });
+  });
+});
+
 app.get('/api/analytics', (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Unauthorized. Please log in.' });
@@ -479,6 +505,36 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(vite.middlewares);
 } else {
   app.use(express.static(path.join(__dirname, '../dist')));
+// DELETE prediction history
+app.delete('/api/predictions', isAuthenticated, (req, res) => {
+  try {
+    const stmt = db.prepare('DELETE FROM predictions WHERE user_id = ?');
+    stmt.run(req.session.userId);
+    res.json({ success: true, message: 'History purged successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to purge history' });
+  }
+});
+
+// --- API: Get Model Stats ---
+app.get('/api/model/stats', (req, res) => {
+  try {
+    const total = db.prepare('SELECT COUNT(*) as count FROM predictions').get() as { count: number };
+    const approved = db.prepare('SELECT COUNT(*) as count FROM predictions WHERE approved = 1').get() as { count: number };
+    const avgProb = db.prepare('SELECT AVG(probability) as avg FROM predictions').get() as { avg: number };
+    
+    res.json({
+      total: total.count,
+      approvalRate: total.count > 0 ? (approved.count / total.count * 100).toFixed(1) : 0,
+      avgConfidence: total.count > 0 ? (avgProb.avg * 100).toFixed(1) : 0,
+      status: aura.isReady ? 'ONLINE' : 'WARMING'
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch model statistics' });
+  }
+});
+
+// Serve Frontend
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../dist', 'index.html'));
   });

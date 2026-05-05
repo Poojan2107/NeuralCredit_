@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
-import { Database, Activity, Shield, Trash2, Calendar, IndianRupee, BrainCircuit, BarChart2, PieChart as PieChartIcon, CheckCircle, XCircle, Download } from 'lucide-react';
+import { Database, Activity, Shield, Calendar, IndianRupee, BrainCircuit, BarChart2, PieChart as PieChartIcon, CheckCircle, XCircle, Download, Zap, Loader2, ArrowUpRight, ArrowDownRight, ExternalLink, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -19,6 +19,7 @@ export default function HistoryPage() {
     const [history, setHistory] = useState<HistoryRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [analytics, setAnalytics] = useState<any>(null);
+    const [isSeeding, setIsSeeding] = useState(false);
 
     useEffect(() => {
         // Fetch both history and analytics in parallel
@@ -70,6 +71,44 @@ export default function HistoryPage() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    };
+
+    const handlePurgeHistory = async () => {
+        if (!confirm('Are you sure you want to permanently delete your entire prediction history? This action cannot be undone.')) return;
+        
+        try {
+            const res = await fetch('/api/predictions', { method: 'DELETE' });
+            if (res.ok) {
+                setHistory([]);
+                fetchHistory(); // Refresh to update stats
+            }
+        } catch (err) {
+            console.error('Purge error:', err);
+        }
+    };
+
+    const handleSimulateTraffic = async () => {
+        setIsSeeding(true);
+        try {
+            const res = await fetch('/api/seed', { method: 'POST' });
+            if (res.ok) {
+                // Instantly re-fetch data to show the new charts
+                setLoading(true);
+                Promise.all([
+                    fetch('/api/predictions/history').then(r => r.json()),
+                    fetch('/api/analytics').then(r => r.json())
+                ]).then(([h, a]) => {
+                    if (Array.isArray(h)) setHistory(h);
+                    if (a && !a.error) setAnalytics(a);
+                    setLoading(false);
+                });
+            }
+        } catch (e) {
+            console.error(e);
+            setLoading(false);
+        } finally {
+            setIsSeeding(false);
+        }
     };
 
     return (
@@ -211,6 +250,22 @@ export default function HistoryPage() {
                         </div>
                         <div className="flex items-center gap-4">
                             <button
+                                onClick={handleSimulateTraffic}
+                                disabled={isSeeding}
+                                className="flex items-center gap-2 px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-mono font-medium rounded-lg border border-indigo-500/40 hover:border-indigo-500/60 transition-colors disabled:opacity-50"
+                            >
+                                {isSeeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                                System Seed (50)
+                            </button>
+                            <button
+                                onClick={handlePurgeHistory}
+                                disabled={history.length === 0}
+                                title="Purge entire history"
+                                className="p-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg border border-rose-500/20 hover:border-rose-500/40 transition-colors disabled:opacity-30"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </button>
+                            <button
                                 onClick={exportToCSV}
                                 disabled={history.length === 0}
                                 className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-medium rounded-lg border border-slate-700 hover:border-slate-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -218,7 +273,7 @@ export default function HistoryPage() {
                                 <Download className="h-4 w-4" />
                                 Export CSV
                             </button>
-                            <div className="text-xs font-mono text-slate-500">
+                            <div className="text-xs font-mono text-slate-500 hidden sm:block">
                                 LIMIT 100
                             </div>
                         </div>
