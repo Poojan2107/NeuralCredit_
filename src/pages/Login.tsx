@@ -52,16 +52,17 @@ export default function Login() {
       <div className="max-w-md w-full animate-fade-in-up">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex p-3 bg-indigo-500/15 rounded-2xl mb-4">
+          <div className="inline-flex p-4 bg-indigo-500/10 rounded-2xl mb-6 border border-indigo-500/20 shadow-[0_0_20px_rgba(99,102,241,0.1)]">
             <CreditCard className="h-10 w-10 text-indigo-400" />
           </div>
-          <h2 className="text-3xl font-extrabold text-white">Welcome back</h2>
-          <p className="mt-2 text-sm text-slate-400">
-            Sign in to access the prediction engine
+          <h2 className="text-4xl font-black text-white tracking-tighter">Neural<span className="text-indigo-500">_</span></h2>
+          <p className="mt-2 text-[10px] text-slate-500 font-mono uppercase tracking-widest">
+            Identity Verification Node
           </p>
         </div>
 
-        <div className="auth-wrapper">
+        <div className="auth-wrapper relative group overflow-hidden">
+          <div className="laser-scan" />
           <form className="space-y-5" onSubmit={handleSubmit}>
             {error && (
               <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3.5 flex items-center gap-2.5">

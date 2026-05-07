@@ -9,38 +9,38 @@ export default function Landing() {
 
     return (
         <div className="min-h-screen flex flex-col">
-            <Navbar />
-
             <main className="flex-1 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full flex flex-col justify-center">
-                {/* Hero Section */}
-                <div className="text-center mt-20 mb-20 animate-fade-in-up">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/50 border border-slate-700/50 text-indigo-400 text-xs font-mono mb-8">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        sys.status === 'ONLINE'
+                <div className="text-center mt-24 mb-24 animate-fade-in-up">
+                    <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-slate-900/80 border border-indigo-500/30 text-indigo-400 text-[10px] font-mono mb-10 backdrop-blur-md shadow-[0_0_20px_rgba(99,102,241,0.15)] uppercase tracking-widest">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        Neural Grid // Production Environment Active
                     </div>
 
-                    <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8">
-                        <span className="text-white">Predict the Future with </span><br className="hidden md:block" />
-                        <span className="gradient-text-header">Neural</span>
-                        <span className="text-indigo-500">Credit_</span>
+                    <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-10 leading-[0.9]">
+                        <span className="text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">PREDICT</span><br />
+                        <span className="gradient-text-header italic">RISK.</span>
+                        <span className="text-white"> SCALE.</span>
                     </h1>
 
-                    <p className="mt-4 max-w-2xl mx-auto text-xl text-slate-400 font-light mb-12">
-                        A state-of-the-art predictive engine utilizing Random Forest machine learning to assess loan eligibility with unparalleled accuracy.
+                    <p className="mt-8 max-w-2xl mx-auto text-base sm:text-lg text-slate-400 font-medium leading-relaxed opacity-80 mb-12">
+                        Harness the power of <span className="text-indigo-400">Aura Engine v2.0</span>. A high-fidelity predictive framework utilizing deep-learning micro-patterns for institutional credit governance.
                     </p>
 
                     <div className="flex flex-col sm:flex-row justify-center gap-6">
                         {user ? (
-                            <Link to="/dashboard" className="btn-cyber flex items-center justify-center gap-2 text-lg">
-                                <LayoutDashboard className="h-5 w-5" /> Enter Dashboard
+                            <Link to="/dashboard" className="btn-cyber flex items-center justify-center gap-3 text-lg px-10">
+                                <LayoutDashboard className="h-5 w-5" /> NODE_DASHBOARD
                             </Link>
                         ) : (
                             <>
-                                <Link to="/register" className="btn-cyber flex items-center justify-center gap-2 text-lg">
-                                    <Zap className="h-5 w-5" /> Initialize Engine
+                                <Link to="/register" className="btn-cyber flex items-center justify-center gap-3 text-lg px-10">
+                                    <Zap className="h-5 w-5" /> INITIALIZE_NODE
                                 </Link>
-                                <Link to="/login" className="px-8 py-4 rounded-xl border border-white/10 text-white hover:bg-white/5 transition-colors font-medium flex items-center justify-center gap-2 text-lg">
-                                    Access Terminal <ChevronRight className="h-5 w-5" />
+                                <Link to="/login" className="px-10 py-4 rounded-xl border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 transition-all font-mono uppercase tracking-widest flex items-center justify-center gap-2 text-sm">
+                                    ACCESS_TERMINAL <ChevronRight className="h-5 w-5 opacity-50" />
                                 </Link>
                             </>
                         )}

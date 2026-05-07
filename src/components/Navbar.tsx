@@ -1,14 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth';
-import { LogOut, User as UserIcon, CreditCard, Database, Wifi, WifiOff, Menu, X } from 'lucide-react';
+import { LogOut, User as UserIcon, CreditCard, Database, Wifi, WifiOff, Menu, X, Shield, Activity, Clock as ClockIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isOnline, setIsOnline] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     // Ping API every 10 seconds to check server health
@@ -59,27 +68,40 @@ export default function Navbar() {
               </span>
             </Link>
           </div>
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-6">
             {user ? (
               <>
-                <div className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-medium border ${isOnline ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20 animate-pulse'}`}>
-                  {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-                  <span>{isOnline ? 'SYSTEM ONLINE' : 'NODE OFFLINE'}</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/50 border border-white/5 text-[10px] font-mono text-slate-500">
+                  <ClockIcon className="h-3 w-3 text-indigo-400" />
+                  <span className="tabular-nums tracking-widest">{time}</span>
                 </div>
-                <Link to="/history" className="flex items-center space-x-1.5 text-slate-400 hover:text-indigo-300 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border border-transparent hover:border-indigo-500/30 hover:bg-indigo-500/10">
-                  <Database className="h-4 w-4" />
+
+                <div className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold border ${isOnline ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20 animate-pulse'}`}>
+                  {isOnline ? <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" /> : <WifiOff className="h-3 w-3" />}
+                  <span className="tracking-tighter">{isOnline ? 'SIGNAL_STABLE' : 'NODE_OFFLINE'}</span>
+                </div>
+
+                <Link to="/history" className={`flex items-center space-x-1.5 px-2 py-1.5 text-xs font-bold uppercase tracking-wider transition-all ${location.pathname === '/history' ? 'nav-link-active' : 'text-slate-500 hover:text-slate-200'}`}>
+                  <Database className="h-3.5 w-3.5" />
                   <span>Logs</span>
                 </Link>
+
+                <Link to="/admin" className={`flex items-center space-x-1.5 px-2 py-1.5 text-xs font-bold uppercase tracking-wider transition-all ${location.pathname === '/admin' ? 'nav-link-active' : 'text-slate-500 hover:text-slate-200'}`}>
+                  <Shield className="h-3.5 w-3.5" />
+                  <span>Admin</span>
+                </Link>
+
                 <div className="flex items-center space-x-2 text-slate-300 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
-                  <UserIcon className="h-4 w-4 text-indigo-400" />
-                  <span className="text-sm font-medium">{user.username}</span>
+                  <UserIcon className="h-3.5 w-3.5 text-indigo-400" />
+                  <span className="text-xs font-bold font-mono tracking-tighter">{user.username.toUpperCase()}</span>
                 </div>
+
                 <button
                   onClick={handleLogout}
-                  className="flex items-center space-x-1.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 hover:text-rose-200 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+                  className="flex items-center space-x-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border border-rose-500/20"
                 >
-                  <LogOut className="h-4 w-4" />
-                  <span>Logout</span>
+                  <LogOut className="h-3 w-3" />
+                  <span>Exit</span>
                 </button>
               </>
             ) : (
@@ -138,6 +160,15 @@ export default function Navbar() {
                   >
                     <Database className="h-5 w-5 text-indigo-400" />
                     <span className="font-medium">System Logs</span>
+                  </Link>
+
+                  <Link
+                    to="/admin"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center space-x-2 text-slate-300 hover:text-white px-4 py-3 rounded-lg hover:bg-white/5 border border-transparent transition-colors"
+                  >
+                    <Shield className="h-5 w-5 text-indigo-400" />
+                    <span className="font-medium">Enterprise Admin</span>
                   </Link>
 
                   <button

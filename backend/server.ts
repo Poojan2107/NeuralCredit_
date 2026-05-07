@@ -7,6 +7,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
 import { z } from 'zod';
+import fs from 'fs';
+import { Request, Response, NextFunction } from 'express';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -26,17 +28,10 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL
-  )
-`);
+    password TEXT NOT NULL,
+    role TEXT DEFAULT 'user'
+  );
 
-try {
-  db.exec(`ALTER TABLE predictions ADD COLUMN age INTEGER DEFAULT 25`);
-} catch (e) {
-  // Column likely already exists, ignore error
-}
-
-db.exec(`
   CREATE TABLE IF NOT EXISTS predictions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
@@ -54,9 +49,18 @@ db.exec(`
     bank_assets INTEGER,
     approved BOOLEAN,
     probability REAL,
+    is_anomaly BOOLEAN DEFAULT 0,
+    anomaly_score REAL DEFAULT 0.0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id)
-  )
+  );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  );
+
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('approval_threshold', '0.5');
 `);
 
 // Middleware
@@ -79,10 +83,18 @@ app.use(
 
 // Middleware to check authentication
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-  if (req.session.userId) {
+  if (req.session && (req.session as any).userId) {
     next();
   } else {
     res.status(401).json({ error: 'Unauthorized. Please log in.' });
+  }
+};
+
+const isAdmin = (req: Request, res: Response, next: NextFunction) => {
+  if (req.session && (req.session as any).role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ error: 'Forbidden. Admin access required.' });
   }
 };
 
@@ -170,12 +182,18 @@ class AuraEngine {
       }
     });
 
-    this.process.on('close', (code: number) => {
-      console.warn(`⚠️ [AURA] Engine exited (code ${code}). Restarting in 2s...`);
+    this.process.on('close', () => {
       this.isReady = false;
-      this.isProcessing = false;
-      setTimeout(() => this.start(), 2000);
+      console.log('⚠️ [AURA] Process exited. Model offline.');
     });
+  }
+
+  public restart() {
+    console.log('🔄 [AURA] Hot-swapping model. Restarting process...');
+    if (this.process) {
+      this.process.kill();
+    }
+    this.start();
   }
 
   public async query(data: any): Promise<any> {
@@ -233,6 +251,100 @@ const predictSchema = z.object({
   bankAssets: z.number().min(0, 'Value cannot be negative'),
 });
 
+// Manual Review Override
+app.post('/api/predictions/:id/review', isAuthenticated, (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { action } = req.body; // 'approve' or 'reject'
+  const approved = action === 'approve' ? 1 : 0;
+
+  try {
+    const stmt = db.prepare('UPDATE predictions SET approved = ?, is_anomaly = 0 WHERE id = ?');
+    stmt.run(approved, id);
+    res.json({ status: 'success', message: `Application ${action}ed` });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Model Retraining Hub
+app.post('/api/model/retrain', isAuthenticated, (req: Request, res: Response) => {
+  const pythonCmd = process.env.PYTHON || (process.platform === 'win32' ? 'py' : 'python3');
+  const trainScript = path.join(__dirname, 'model', 'train.py');
+  
+  const trainer = spawn(pythonCmd, [trainScript], { cwd: path.join(__dirname, 'model') });
+  
+  let output = '';
+  trainer.stdout.on('data', (data) => { output += data.toString(); });
+  trainer.stderr.on('data', (data) => { console.error(`[Train Error] ${data}`); });
+
+  trainer.on('close', (code) => {
+    if (code === 0) {
+      try {
+        const result = JSON.parse(output.trim());
+        // Auto-restart Aura to pick up new pkl
+        AuraEngine.getInstance().restart();
+        res.json(result);
+      } catch (e) {
+        res.status(500).json({ error: 'Training completed but output was unreadable', details: output });
+      }
+    } else {
+      res.status(500).json({ error: 'Training process failed', code });
+    }
+  });
+});
+
+app.get('/api/model/versions', isAuthenticated, (req: Request, res: Response) => {
+  const versionsDir = path.join(__dirname, 'model', 'versions');
+  if (!fs.existsSync(versionsDir)) return res.json([]);
+  
+  const files = fs.readdirSync(versionsDir)
+    .filter(f => f.endsWith('.pkl'))
+    .map(f => {
+      const stats = fs.statSync(path.join(versionsDir, f));
+      return {
+        name: f,
+        createdAt: stats.birthtime,
+        size: (stats.size / 1024).toFixed(1) + ' KB'
+      };
+    })
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    
+  res.json(files);
+});
+
+app.post('/api/model/deploy', isAuthenticated, (req: Request, res: Response) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Model name required' });
+
+  const src = path.join(__dirname, 'model', 'versions', name);
+  const dest = path.join(__dirname, 'model', 'random_forest_model.pkl');
+
+  if (!fs.existsSync(src)) return res.status(404).json({ error: 'Version not found' });
+
+  try {
+    fs.copyFileSync(src, dest);
+    AuraEngine.getInstance().restart();
+    res.json({ status: 'success', message: `Deployed ${name} as active model` });
+  } catch (e) {
+    res.status(500).json({ error: 'Deployment failed', details: e });
+  }
+});
+
+// --- API: Governance Settings ---
+app.get('/api/settings', isAuthenticated, (req, res) => {
+  const settings = db.prepare('SELECT * FROM settings').all() as { key: string, value: string }[];
+  const config = settings.reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {});
+  res.json(config);
+});
+
+app.post('/api/settings', isAuthenticated, (req, res) => {
+  const { approval_threshold } = req.body;
+  if (approval_threshold !== undefined) {
+    db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('approval_threshold', approval_threshold.toString());
+  }
+  res.json({ success: true });
+});
+
 // --- Auth Routes ---
 
 app.post('/api/register', async (req, res) => {
@@ -254,10 +366,19 @@ app.post('/api/register', async (req, res) => {
       const stmt = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)');
       const info = stmt.run(username, hashedPassword);
 
-      req.session.userId = Number(info.lastInsertRowid);
-      req.session.username = username;
+      (req.session as any).userId = Number(info.lastInsertRowid);
+      (req.session as any).username = username;
+      (req.session as any).role = 'user';
 
-      res.json({ success: true, message: 'Registration successful' });
+      res.json({
+        success: true,
+        message: 'Registration successful',
+        user: {
+          id: Number(info.lastInsertRowid),
+          username: username,
+          role: 'user'
+        }
+      });
     } catch (err: any) {
       if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
         return res.status(400).json({ error: 'Username already exists' });
@@ -289,11 +410,18 @@ app.post('/api/login', async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
-
-    req.session.userId = user.id;
-    req.session.username = user.username;
-
-    res.json({ success: true, message: 'Login successful', user: { username: user.username } });
+    
+    (req.session as any).userId = user.id;
+    (req.session as any).username = user.username;
+    (req.session as any).role = user.role;
+    
+    res.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role
+      }
+    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -323,7 +451,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // --- Prediction Route (Optimized via Persistent Aura Engine) ---
-app.post('/api/predict', isAuthenticated, async (req, res) => {
+app.post('/api/predict', isAuthenticated, async (req: Request, res: Response) => {
 
   const ip = req.ip || 'unknown';
   if (!checkRateLimit(`predict:${ip}`, 30, 60 * 1000)) {
@@ -352,16 +480,22 @@ app.post('/api/predict', isAuthenticated, async (req, res) => {
     // STEP 2 & 3: Save Prediction into SQLite Database
     // -----------------------------------------------------
     try {
+      // Apply Global Threshold Governance
+      const thresholdSetting = db.prepare('SELECT value FROM settings WHERE key = ?').get('approval_threshold') as { value: string };
+      const threshold = parseFloat(thresholdSetting?.value || '0.5');
+      const finalDecision = result.probability >= threshold ? 1 : 0;
+
       const stmt = db.prepare(`
           INSERT INTO predictions (
             user_id, age, dependents, education, self_employed, annual_income,
             loan_amount, loan_term, cibil_score, residential_assets,
-            commercial_assets, luxury_assets, bank_assets, approved, probability
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            commercial_assets, luxury_assets, bank_assets, approved, probability,
+            is_anomaly, anomaly_score
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
       stmt.run(
-        req.session.userId, // user_id (who asked)
+        req.session.userId,
         validation.data.age,
         validation.data.dependents,
         validation.data.education,
@@ -374,8 +508,10 @@ app.post('/api/predict', isAuthenticated, async (req, res) => {
         validation.data.commercialAssets,
         validation.data.luxuryAssets,
         validation.data.bankAssets,
-        result.approved ? 1 : 0, // Store as boolean int
-        result.probability
+        result.approved ? 1 : 0,
+        result.probability,
+        result.is_anomaly ? 1 : 0,
+        result.anomaly_score
       );
     } catch (dbError) {
       console.error('Failed to log prediction to database:', dbError);
@@ -393,14 +529,14 @@ app.post('/api/predict', isAuthenticated, async (req, res) => {
 });
 
 // --- History API ---
-app.get('/api/predictions/history', isAuthenticated, (req, res) => {
+app.get('/api/predictions/history', isAuthenticated, (req: Request, res: Response) => {
   try {
     // Fetch the 50 most recent predictions.
     // We include BOTH the user's personal predictions (user_id = ?) 
     // AND the historical mock dataset we seeded (user_id IS NULL) so there is always data to show.
     const stmt = db.prepare(`
       SELECT 
-        id, loan_amount, annual_income, cibil_score, approved, probability, created_at,
+        id, loan_amount, annual_income, cibil_score, approved, probability, is_anomaly, anomaly_score, created_at,
         CASE WHEN user_id IS NULL THEN 'Historical Data' ELSE 'You' END as source
       FROM predictions 
       WHERE user_id = ? OR user_id IS NULL
@@ -495,24 +631,31 @@ app.get('/api/analytics', (req, res) => {
   }
 });
 
-// --- Vite Integration ---
+// --- API: Predictions Management ---
 
-if (process.env.NODE_ENV !== 'production') {
-  const vite = await createViteServer({
-    server: { middlewareMode: true },
-    appType: 'spa',
-  });
-  app.use(vite.middlewares);
-} else {
-  app.use(express.static(path.join(__dirname, '../dist')));
 // DELETE prediction history
-app.delete('/api/predictions', isAuthenticated, (req, res) => {
+app.delete('/api/predictions', isAuthenticated, (req: Request, res: Response) => {
   try {
     const stmt = db.prepare('DELETE FROM predictions WHERE user_id = ?');
-    stmt.run(req.session.userId);
+    stmt.run((req.session as any).userId);
     res.json({ success: true, message: 'History purged successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to purge history' });
+  }
+});
+
+// Admin History (All predictions)
+app.get('/api/admin/history', isAuthenticated, isAdmin, (req: Request, res: Response) => {
+  try {
+    const predictions = db.prepare(`
+      SELECT p.*, u.username 
+      FROM predictions p 
+      JOIN users u ON p.user_id = u.id 
+      ORDER BY p.created_at DESC
+    `).all();
+    res.json(predictions);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch admin history' });
   }
 });
 
@@ -534,12 +677,68 @@ app.get('/api/model/stats', (req, res) => {
   }
 });
 
-// Serve Frontend
+// --- Vite Integration ---
+
+if (process.env.NODE_ENV !== 'production') {
+  const vite = await createViteServer({
+    server: { middlewareMode: true },
+    appType: 'spa',
+  });
+  app.use(vite.middlewares);
+} else {
+  app.use(express.static(path.join(__dirname, '../dist')));
+  
+
+  // Serve Frontend
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../dist', 'index.html'));
   });
 }
 
-app.listen(PORT, '0.0.0.0', () => {
+// --- Data Seeding Logic ---
+async function seedData() {
+  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
+  if (userCount.count === 0) {
+    console.log('Seeding initial data...');
+    
+    // Create Admin
+    const bcrypt = (await import('bcryptjs')).default;
+    const adminPass = await bcrypt.hash('admin123', 10);
+    db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)').run('admin', adminPass, 'admin');
+    
+    // Create Sample User
+    const userPass = await bcrypt.hash('user123', 10);
+    db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run('demo_user', userPass);
+    
+    // Seed Predictions
+    const samplePredictions = [
+      { user_id: 2, income: 50000, loan: 20000, prob: 0.85, approved: 1 },
+      { user_id: 2, income: 30000, loan: 45000, prob: 0.32, approved: 0 },
+      { user_id: 2, income: 80000, loan: 10000, prob: 0.98, approved: 1 },
+    ];
+    
+    const stmt = db.prepare(`
+      INSERT INTO predictions (user_id, annual_income, loan_amount, probability, approved) 
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    
+    samplePredictions.forEach(p => {
+      stmt.run(p.user_id, p.income, p.loan, p.prob, p.approved);
+    });
+    
+    console.log('Seeding complete.');
+  }
+}
+
+// Wrap in async to use await bcrypt
+(async () => {
+  try {
+    await seedData();
+  } catch (e) {
+    console.error('Seeding failed:', e);
+  }
+})();
+
+app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

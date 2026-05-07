@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'motion/react';
-import {
-  CheckCircle, XCircle, Calculator, IndianRupee, Briefcase,
-  GraduationCap, Users, Clock, Activity, Building2, Gem,
-  Landmark, AlertTriangle, ChevronRight, Cpu, Brain,
-  TrendingDown, Lightbulb, Target, ShieldCheck, Link, Lock, Building, RefreshCw,
-  Download, WifiOff, UserPlus, Terminal
-} from 'lucide-react';
+import { IndianRupee, Briefcase, Calendar, Calculator, Info, CheckCircle, AlertCircle, Sparkles, TrendingUp, TrendingDown, Target, Brain, Activity, Terminal, ShieldCheck, Zap, Scan, GraduationCap, Users, Clock, Building2, Gem, Landmark, AlertTriangle, ChevronRight, Cpu, Link, Lock, Building, RefreshCw, WifiOff, UserPlus, Volume2, BrainCircuit, CheckCircle2, XCircle, Download, Lightbulb } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
+import { useAuth } from '../auth';
+import DocumentScanner from './DocumentScanner';
+import IdentityScanner from './IdentityScanner';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { generateSanctionLetter } from '../utils/pdfGenerator';
 import CustomSelect from './CustomSelect';
+import BankingConnector from './BankingConnector';
 
 // --- Zod Validation Schema ---
 const loanSchema = z.object({
@@ -105,8 +103,26 @@ export default function LoanForm() {
   const [result, setResult] = useState<PredictionResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
+  const [showBanking, setShowBanking] = useState(false);
+  const [synced, setSynced] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const { user } = useAuth();
   const [showOfflineModalOverride, setShowOfflineModalOverride] = useState(false);
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
+
+  const speakResult = (approved: boolean) => {
+    if (!isVoiceEnabled || !window.speechSynthesis) return;
+    
+    const msg = new SpeechSynthesisUtterance();
+    msg.text = approved 
+      ? "Aura Engine has processed your request. Loan application approved. Welcome to Neural Credit."
+      : "Aura Engine analysis complete. Request denied based on risk topology convergence.";
+    msg.rate = 0.9;
+    msg.pitch = 0.8; // Deep professional voice
+    window.speechSynthesis.speak(msg);
+  };
 
   // --- 3D Card Physics ---
   const x = useMotionValue(0);
@@ -138,67 +154,37 @@ export default function LoanForm() {
     y.set(0);
   };
 
-  const handleBankSync = async (e: React.MouseEvent) => {
-    e.preventDefault();
+  const handleScanComplete = (data: any) => {
+    if (data.annualIncome) {
+      setFormData(prev => ({ ...prev, annualIncome: data.annualIncome }));
+    }
+    setTimeout(() => setShowScanner(false), 2000);
+  };
+
+  const handleBankSync = () => {
     setIsSyncing(true);
+    setTimeout(() => {
+      setIsSyncing(false);
+      setIsBankModalOpen(false);
+      handleBankingSuccess({
+        annualIncome: 1200000,
+        residentialAssets: 4500000,
+        bankAssets: 1500000,
+        cibilScore: 785
+      });
+    }, 3000);
+  };
 
-    // Simulate complex API integration latency
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // ARCHETYPE ENGINE
-    const archetypes = ['Professional', 'Freelancer', 'Entrepreneur', 'Graduate'];
-    const type = archetypes[Math.floor(Math.random() * archetypes.length)];
-
-    let mockIncome = 500000; let mockCibil = 750; let resAssets = 0; let bnkAssets = 0; let luxAssets = 0;
-    let isSelfEmployed = 'No'; let mockLoan = 200000; let mockTerm = 12;
-
-    switch (type) {
-      case 'Professional':
-        mockIncome = Math.floor(Math.random() * (3000000 - 1500000) + 1500000);
-        mockCibil = Math.floor(Math.random() * (850 - 780) + 780);
-        resAssets = Math.floor(mockIncome * 2.5); bnkAssets = Math.floor(mockIncome * 0.8);
-        mockLoan = Math.floor(Math.random() * (1500000 - 500000) + 500000);
-        mockTerm = [12, 24, 36, 48, 60][Math.floor(Math.random() * 5)];
-        break;
-      case 'Freelancer':
-        mockIncome = Math.floor(Math.random() * (1200000 - 600000) + 600000);
-        mockCibil = Math.floor(Math.random() * (740 - 650) + 650);
-        isSelfEmployed = 'Yes'; bnkAssets = Math.floor(mockIncome * 0.3);
-        mockLoan = Math.floor(Math.random() * (500000 - 100000) + 100000);
-        mockTerm = [12, 24, 36][Math.floor(Math.random() * 3)];
-        break;
-      case 'Entrepreneur':
-        mockIncome = Math.floor(Math.random() * (5000000 - 2500000) + 2500000);
-        mockCibil = Math.floor(Math.random() * (800 - 600) + 600);
-        isSelfEmployed = 'Yes'; resAssets = Math.floor(mockIncome * 1.5);
-        bnkAssets = Math.floor(mockIncome * 1.2); luxAssets = Math.floor(mockIncome * 0.5);
-        mockLoan = Math.floor(Math.random() * (3000000 - 1000000) + 1000000);
-        mockTerm = [24, 36, 48, 60, 84][Math.floor(Math.random() * 5)];
-        break;
-      case 'Graduate':
-        mockIncome = Math.floor(Math.random() * (800000 - 400000) + 400000);
-        mockCibil = Math.floor(Math.random() * (750 - 700) + 700);
-        bnkAssets = Math.floor(mockIncome * 0.1);
-        mockLoan = Math.floor(Math.random() * (300000 - 50000) + 50000);
-        mockTerm = [12, 24, 36][Math.floor(Math.random() * 3)];
-        break;
-    }
-
+  const handleBankingSuccess = (data: any) => {
     setFormData(prev => ({
-      ...prev, annualIncome: mockIncome, loanAmount: mockLoan, loanTerm: mockTerm,
-      residentialAssets: resAssets, bankAssets: bnkAssets, commercialAssets: 0, luxuryAssets: luxAssets,
-      cibilScore: mockCibil, selfEmployed: isSelfEmployed as any
+      ...prev,
+      annualIncome: data.annualIncome,
+      residentialAssets: data.residentialAssets,
+      bankAssets: data.bankAssets,
+      cibilScore: data.cibilScore
     }));
-
-    if (hasCoApplicant) {
-      const coIncome = Math.floor(mockIncome * 0.7);
-      setCoFormData(prev => ({
-        ...prev, annualIncome: coIncome, residentialAssets: Math.floor(coIncome * 1.1),
-        bankAssets: Math.floor(coIncome * 0.4), cibilScore: Math.floor(Math.random() * (850 - 700) + 700)
-      }));
-    }
-
-    setFieldErrors({}); setIsSyncing(false); setIsBankModalOpen(false);
+    setSynced(true);
+    setShowBanking(false);
   };
 
   const handleCoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -239,15 +225,10 @@ export default function LoanForm() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setApiError(null); setResult(null);
-
-    // Network Hook Validation
-    if (!isOnline) {
-      setShowOfflineModalOverride(true);
-      return;
-    }
+  const startPrediction = async () => {
+    setShowScanner(false);
+    setLoading(true);
+    setResult(null);
 
     const validation = loanSchema.safeParse(formData);
     if (!validation.success) {
@@ -257,33 +238,20 @@ export default function LoanForm() {
         if (!errors[field]) errors[field] = issue.message;
       });
       setFieldErrors(errors);
+      setLoading(false);
       return;
     }
 
     let finalPayload = { ...formData };
-
     if (hasCoApplicant) {
-      const coValidation = loanSchema.safeParse(coFormData);
-      if (!coValidation.success) {
-        setApiError("Co-Applicant data is incomplete or invalid. Please verify all Co-Applicant inputs.");
-        return;
-      }
-
       finalPayload.age = Math.max(formData.age, coFormData.age);
       finalPayload.dependents = Math.max(formData.dependents, coFormData.dependents);
-      finalPayload.education = formData.education === 'Graduate' || coFormData.education === 'Graduate' ? 'Graduate' : 'Not Graduate';
-      finalPayload.selfEmployed = formData.selfEmployed === 'No' && coFormData.selfEmployed === 'No' ? 'No' : 'Yes';
       finalPayload.annualIncome = formData.annualIncome + coFormData.annualIncome;
       finalPayload.cibilScore = Math.floor((formData.cibilScore + coFormData.cibilScore) / 2);
       finalPayload.residentialAssets = formData.residentialAssets + coFormData.residentialAssets;
-      finalPayload.commercialAssets = formData.commercialAssets + coFormData.commercialAssets;
-      finalPayload.luxuryAssets = formData.luxuryAssets + coFormData.luxuryAssets;
       finalPayload.bankAssets = formData.bankAssets + coFormData.bankAssets;
     }
 
-    setFieldErrors({});
-    setLoading(true);
-    
     try {
       const res = await fetch('/api/predict', {
         method: 'POST',
@@ -311,7 +279,6 @@ export default function LoanForm() {
         else messages.push(`Your profile was approved, but market volatility and risk factors set your rate at ${rate}%.`);
         if (dti < 0.3) messages.push(`Your ${hasCoApplicant ? 'joint ' : ''}monthly income comfortably supports this estimated EMI. Extremely low default risk detected.`);
       } else {
-        // --- XAI "What-If" Engine ---
         if (dti > 0.4) {
           const recommendedMax = (monthlyIncome * 0.4) / (r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1));
           messages.push(`DEBT-TO-INCOME CRITICAL: Your DTI is ${(dti * 100).toFixed(1)}%. Lowering your loan request to ₹${Math.floor(recommendedMax).toLocaleString('en-IN')} would likely trigger an approval.`);
@@ -340,6 +307,7 @@ export default function LoanForm() {
         insights: { interestRate: rate, emi: emi, messages: messages },
         feature_importance: data.feature_importance, finalPayload: finalPayload
       });
+      speakResult(data.approved);
     } catch (err: any) {
       setApiError('Network error. Ensure the server is running.');
     } finally {
@@ -347,13 +315,29 @@ export default function LoanForm() {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setApiError(null); setResult(null);
+
+    if (!isOnline) {
+      setShowOfflineModalOverride(true);
+      return;
+    }
+    setShowScanner(true);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: "easeOut" }}
       className="w-full max-w-7xl mx-auto"
     >
-      {/* Offline Toast */}
       <AnimatePresence>
+        {showBanking && (
+          <BankingConnector 
+            onSuccess={handleBankingSuccess}
+            onClose={() => setShowBanking(false)}
+          />
+        )}
         {!isOnline && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: -20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: -20 }}
@@ -370,6 +354,15 @@ export default function LoanForm() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {showScanner && (
+          <IdentityScanner 
+            onVerified={startPrediction} 
+            onCancel={() => setShowScanner(false)} 
+          />
+        )}
+      </AnimatePresence>
+
       {apiError && (
         <motion.div
           initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
@@ -383,47 +376,66 @@ export default function LoanForm() {
         </motion.div>
       )}
 
-      {/* Top Banner for Open Banking */}
-      <div className="mb-8 animate-fade-in-up">
+      <div className="flex items-center justify-between mb-8">
+        
         <button
-          onClick={(e) => { e.preventDefault(); setIsBankModalOpen(true); }}
-          className="w-full relative overflow-hidden bento-card p-4 sm:p-6 group cursor-pointer hover:border-emerald-500/50 transition-all border border-emerald-500/20 bg-emerald-500/5 text-left"
+          onClick={() => setShowScanner(!showScanner)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
+            showScanner 
+              ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' 
+              : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/20'
+          }`}
         >
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-400"></div>
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-emerald-500/10 rounded-full group-hover:bg-emerald-500/20 transition-colors">
-                <ShieldCheck className="h-6 w-6 text-emerald-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-200 group-hover:text-emerald-300 transition-colors">Auto-Fill via Open Banking</h3>
-                <p className="text-sm text-slate-400">Securely connect your bank to instantly verify income, assets, and credit score.</p>
-              </div>
-            </div>
-            <div className="shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
-              <span className="flex items-center justify-center gap-2 text-sm font-semibold text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 px-6 py-2.5 rounded-full border border-emerald-500/20 transition-colors">
-                <Link className="h-4 w-4" /> Connect Bank
-              </span>
-            </div>
-          </div>
+          <Scan className="h-4 w-4" />
+          {showScanner ? 'ABORT_SCAN' : 'AUTO_VERIFY'}
         </button>
       </div>
 
+      <AnimatePresence>
+        {showScanner && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="mb-8 overflow-hidden"
+          >
+            <DocumentScanner onScanComplete={handleScanComplete} />
+            <div className="mt-4 flex items-center gap-2 text-[10px] font-mono text-slate-500 bg-slate-900/50 p-2 rounded-lg border border-white/5">
+              <Zap className="h-3 w-3 text-amber-500" />
+              ACCELERATED_DATA_ENTRY_ACTIVE: UPLOAD DOCUMENTS TO AUTO-POPULATE FIELDS
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-100 transition-opacity">
 
-        {/* Bento Card 1: Personal Details */}
-        <div className="bento-card p-6 md:col-span-1 flex flex-col gap-8 pb-10">
-          <div className="flex items-center gap-3 border-b border-indigo-500/20 pb-4">
-            <div className="p-2 rounded-lg bg-indigo-500/10">
-              <Users className="h-5 w-5 text-indigo-400" />
+        {/* Bento Card 1: Demographics + Bank Sync */}
+        <div className="bento-card p-6 flex flex-col gap-8 pb-10">
+          <div className="flex items-center justify-between border-b border-indigo-500/20 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-indigo-500/10">
+                <Users className="h-5 w-5 text-indigo-400" />
+              </div>
+              <h2 className="text-lg font-bold text-slate-200">Demographics</h2>
             </div>
-            <h2 className="text-lg font-bold text-slate-200">Demographics</h2>
+            <button
+              type="button"
+              onClick={() => setShowBanking(true)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
+                synced 
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                  : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500 hover:text-white'
+              }`}
+            >
+              {synced ? <CheckCircle2 className="h-3 w-3" /> : <Building2 className="h-3 w-3" />}
+              {synced ? 'Bank Data Synced' : 'Sync Bank Data'}
+            </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-8">
             <FieldInput label="Age" name="age" value={formData.age} icon={Users} error={fieldErrors.age} onChange={handleChange} placeholder="Years (e.g. 25)" min={18} max={65} />
             <FieldInput label="Dependents" name="dependents" value={formData.dependents} icon={Users} error={fieldErrors.dependents} onChange={handleChange} placeholder="Number" max={10} />
           </div>
-
           <div className="space-y-8">
             <CustomSelect 
               label="Education Context" name="education" value={formData.education} icon={GraduationCap} onChange={handleChange}
@@ -470,21 +482,19 @@ export default function LoanForm() {
         </div>
 
         {/* Co-Applicant Pipeline Hook */}
-        <div className="md:col-span-2 lg:col-span-3 mt-2">
+        <div className="md:col-span-1 lg:col-span-1">
           <button
             type="button" onClick={() => setHasCoApplicant(!hasCoApplicant)}
-            className={`w-full bento-card p-5 hover:bg-white/5 transition-all outline-none border flex justify-between items-center group ${hasCoApplicant ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-indigo-500/20'}`}
+            className={`w-full h-full bento-card p-6 hover:bg-white/5 transition-all outline-none border flex flex-col justify-center items-center text-center gap-4 group ${hasCoApplicant ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-indigo-500/20'}`}
           >
-            <div className="flex items-center gap-4">
-              <div className={`p-2.5 rounded-xl transition-colors ${hasCoApplicant ? 'bg-indigo-500/20 text-indigo-300' : 'bg-slate-800 text-slate-400'}`}>
-                <UserPlus className="h-5 w-5" />
-              </div>
-              <div className="text-left">
-                <span className="font-bold text-slate-200 block text-lg">Secondary Joint Applicant Node</span>
-                <span className="text-sm text-slate-400 font-light mt-1 block">Merge global income pipelines to enhance deterministic approval rates.</span>
-              </div>
+            <div className={`p-4 rounded-2xl transition-all ${hasCoApplicant ? 'bg-indigo-500/20 text-indigo-300 scale-110' : 'bg-slate-800 text-slate-400'}`}>
+              <UserPlus className="h-8 w-8" />
             </div>
-            <div className={`w-12 h-6 rounded-full relative transition-colors ${hasCoApplicant ? 'bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'bg-slate-700'}`}>
+            <div>
+              <span className="font-bold text-slate-200 block text-lg">Joint Applicant</span>
+              <span className="text-xs text-slate-500 font-light mt-1 block">Merge income pipelines to enhance approval rates.</span>
+            </div>
+            <div className={`w-12 h-6 rounded-full relative transition-colors mt-2 ${hasCoApplicant ? 'bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'bg-slate-700'}`}>
               <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${hasCoApplicant ? 'translate-x-6' : ''}`}></div>
             </div>
           </button>
@@ -493,23 +503,21 @@ export default function LoanForm() {
         <AnimatePresence>
           {hasCoApplicant && (
             <motion.div
-              initial={{ opacity: 0, height: 0, scaleY: 0.95 }} animate={{ opacity: 1, height: 'auto', scaleY: 1 }} exit={{ opacity: 0, height: 0, scaleY: 0.95 }}
-              className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6 origin-top"
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             >
               {/* Secondary Applicant Block */}
               <div className="bento-card p-6 flex flex-col gap-8 pb-10 border-indigo-500/30 bg-indigo-500/[0.04]">
                 <div className="flex items-center gap-3 border-b border-indigo-500/20 pb-4">
                   <UserPlus className="h-5 w-5 text-indigo-400" />
-                  <h2 className="text-lg font-bold text-slate-200">Dependent Demographics</h2>
+                  <h2 className="text-lg font-bold text-slate-200">Co-Applicant Entity</h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-8">
-                  <FieldInput label="Age" name="age" value={coFormData.age} icon={Users} onChange={handleCoChange} placeholder="Years" />
-                  <FieldInput label="Dependents" name="dependents" value={coFormData.dependents} icon={Users} onChange={handleCoChange} placeholder="Number" />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-8">
+                  <FieldInput label="Co-Age" name="age" value={coFormData.age} icon={Users} onChange={handleCoChange} />
+                  <FieldInput label="Co-Dependents" name="dependents" value={coFormData.dependents} icon={Users} onChange={handleCoChange} />
                   <CustomSelect 
                     label="Education" name="education" value={coFormData.education} icon={GraduationCap} onChange={handleCoChange}
-                    options={[{ label: 'University Graduate', value: 'Graduate' }, { label: 'Not Graduated', value: 'Not Graduate' }]}
+                    options={[{ label: 'Graduate', value: 'Graduate' }, { label: 'Not Graduate', value: 'Not Graduate' }]}
                   />
                   <CustomSelect 
                     label="Employment" name="selfEmployed" value={coFormData.selfEmployed} icon={Briefcase} onChange={handleCoChange}
@@ -564,19 +572,19 @@ export default function LoanForm() {
           <div className="mt-auto pt-6 border-t border-white/5">
             <button
               type="submit" disabled={loading || !isOnline}
-              className="btn-cyber w-full flex items-center justify-center gap-3 relative group text-lg"
+              className="btn-cyber w-full flex items-center justify-center gap-3 relative group text-lg py-5"
             >
               {loading ? (
                 <>
                   <div className="laser-scan"></div>
-                  <Cpu className="h-6 w-6 animate-pulse" />
-                  <span className="font-mono tracking-wider text-sm">EVALUATING MATRICES...</span>
+                  <RefreshCw className="h-6 w-6 animate-spin text-indigo-400" />
+                  <span className="font-mono tracking-widest text-[10px] uppercase">Processing_Matrices...</span>
                 </>
               ) : (
                 <>
-                  <Brain className="h-6 w-6" />
-                  Execute Neural Run
-                  <ChevronRight className="h-5 w-5 opacity-0 -ml-3 group-hover:opacity-100 group-hover:ml-0 transition-all font-bold" />
+                  <Brain className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                  <span className="tracking-tight">EXECUTE_NEURAL_RUN</span>
+                  <ChevronRight className="h-5 w-5 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all font-bold" />
                 </>
               )}
             </button>
@@ -721,6 +729,27 @@ export default function LoanForm() {
                       </p>
                     </div>
                   ))}
+
+                  {/* Neural Terminal Log Overlay */}
+                  <div className="mt-6 p-4 rounded-xl bg-black/40 border border-indigo-500/20 font-mono text-[10px] space-y-2 overflow-hidden relative group">
+                    <div className="flex items-center justify-between mb-2 opacity-50 border-b border-white/5 pb-1">
+                      <span className="flex items-center gap-1"><Terminal className="h-3 w-3" /> DECISION_LOG</span>
+                      <span>v2.0_READY</span>
+                    </div>
+                    {[
+                      { t: '0.00ms', m: 'INITIALIZING_AURA_CONTEXT...', c: 'text-indigo-400' },
+                      { t: '0.12ms', m: 'MAPPING_DEMOGRAPHIC_NODES...', c: 'text-slate-500' },
+                      { t: '0.24ms', m: `EVALUATING_CIBIL_VECTOR_[${result.finalPayload?.cibilScore}]`, c: 'text-slate-300' },
+                      { t: '0.38ms', m: 'RF_CLASSIFIER_PATH_CONVERGED', c: 'text-emerald-500' },
+                      { t: '0.45ms', m: `PREDICTION_EMITTED: ${result.approved ? 'APPROVE' : 'REJECT'}`, c: result.approved ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold' }
+                    ].map((line, i) => (
+                      <div key={i} className="flex gap-4 items-center animate-fade-in" style={{ animationDelay: `${i * 0.4}s` }}>
+                        <span className="text-indigo-500/50">[{line.t}]</span>
+                        <span className={line.c}>{line.m}</span>
+                      </div>
+                    ))}
+                    <div className="absolute top-0 right-0 h-full w-[2px] bg-indigo-500/20 animate-pulse" />
+                  </div>
                 </div>
               </div>
             </div>

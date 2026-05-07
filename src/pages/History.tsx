@@ -21,18 +21,24 @@ export default function HistoryPage() {
     const [analytics, setAnalytics] = useState<any>(null);
     const [isSeeding, setIsSeeding] = useState(false);
 
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [historyData, analyticsData] = await Promise.all([
+                fetch('/api/predictions/history').then(res => res.json()),
+                fetch('/api/analytics').then(res => res.json())
+            ]);
+            if (Array.isArray(historyData)) setHistory(historyData);
+            if (analyticsData && !analyticsData.error) setAnalytics(analyticsData);
+        } catch (err) {
+            console.error("Could not load dashboard data", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        // Fetch both history and analytics in parallel
-        Promise.all([
-            fetch('/api/predictions/history').then(res => res.json()),
-            fetch('/api/analytics').then(res => res.json())
-        ])
-            .then(([historyData, analyticsData]) => {
-                if (Array.isArray(historyData)) setHistory(historyData);
-                if (analyticsData && !analyticsData.error) setAnalytics(analyticsData);
-            })
-            .catch(err => console.error("Could not load dashboard data", err))
-            .finally(() => setLoading(false));
+        fetchData();
     }, []);
 
     const COLORS = ['#8b5cf6', '#10b981', '#f43f5e', '#f59e0b'];
@@ -80,7 +86,7 @@ export default function HistoryPage() {
             const res = await fetch('/api/predictions', { method: 'DELETE' });
             if (res.ok) {
                 setHistory([]);
-                fetchHistory(); // Refresh to update stats
+                fetchData(); // Refresh to update stats
             }
         } catch (err) {
             console.error('Purge error:', err);
@@ -93,15 +99,7 @@ export default function HistoryPage() {
             const res = await fetch('/api/seed', { method: 'POST' });
             if (res.ok) {
                 // Instantly re-fetch data to show the new charts
-                setLoading(true);
-                Promise.all([
-                    fetch('/api/predictions/history').then(r => r.json()),
-                    fetch('/api/analytics').then(r => r.json())
-                ]).then(([h, a]) => {
-                    if (Array.isArray(h)) setHistory(h);
-                    if (a && !a.error) setAnalytics(a);
-                    setLoading(false);
-                });
+                fetchData();
             }
         } catch (e) {
             console.error(e);
@@ -113,8 +111,6 @@ export default function HistoryPage() {
 
     return (
         <div className="min-h-screen flex flex-col">
-            <Navbar />
-
             <main className="flex-1 py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
                 <div className="mb-10 text-center animate-fade-in-up">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/50 border border-slate-700/50 text-indigo-400 text-xs font-mono mb-4">
@@ -358,11 +354,18 @@ export default function HistoryPage() {
                                                 </span>
                                             </td>
                                             <td className="py-4 px-6 text-right font-mono font-bold">
-                                                {record.approved ? (
-                                                    <span className="text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]">Pass</span>
-                                                ) : (
-                                                    <span className="text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.4)]">Fail</span>
-                                                )}
+                                                <div className="flex flex-col items-end gap-1">
+                                                    {record.approved ? (
+                                                        <span className="text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]">Pass</span>
+                                                    ) : (
+                                                        <span className="text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.4)]">Fail</span>
+                                                    )}
+                                                    {record.is_anomaly === 1 && (
+                                                        <span className="text-[9px] bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded border border-rose-500/50 anomaly-glitch font-black uppercase tracking-tighter">
+                                                            NEURAL_ANOMALY
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                         </motion.tr>
                                     ))

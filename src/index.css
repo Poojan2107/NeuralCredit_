@@ -28,13 +28,24 @@ body::before {
   background: 
     radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.08), transparent 50%),
     radial-gradient(circle at 85% 30%, rgba(99, 102, 241, 0.1), transparent 50%),
-    linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9));
+    radial-gradient(circle at 50% 80%, rgba(244, 63, 94, 0.05), transparent 50%),
+    linear-gradient(rgba(15, 23, 42, 1), rgba(15, 23, 42, 1));
   animation: bg-shift 20s ease-in-out infinite alternate;
 }
 
-/* Digital Grid Layer */
+/* Noise Texture Overlay */
 body::after {
   content: '';
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  z-index: -1.5;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+}
+
+/* Digital Grid Layer */
+.digital-grid {
   position: fixed;
   top: 0;
   left: 0;
@@ -75,6 +86,64 @@ body::after {
   100% { transform: translate(1%, -1%) scale(1.1); filter: hue-rotate(-15deg); }
 }
 
+/* --- Glitch Effect for Anomalies --- */
+@keyframes glitch {
+  0% { transform: translate(0); text-shadow: -2px 0 #ff00c1, 2px 0 #00fff9; }
+  25% { transform: translate(-2px, 2px); text-shadow: 2px 0 #ff00c1, -2px 0 #00fff9; }
+  50% { transform: translate(2px, -2px); text-shadow: -2px 0 #ff00c1, 2px 0 #00fff9; }
+  75% { transform: translate(-2px, -2px); text-shadow: 2px 0 #ff00c1, -2px 0 #00fff9; }
+  100% { transform: translate(0); text-shadow: -2px 0 #ff00c1, 2px 0 #00fff9; }
+}
+
+.anomaly-glitch {
+  animation: glitch 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
+  color: #fb7185;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+}
+
+/* --- Terminal Typing Animation --- */
+@keyframes type {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.terminal-line {
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid #6366f1;
+  animation: type 1s steps(40, end), blink 0.75s step-end infinite;
+}
+
+@keyframes blink {
+  from, to { border-color: transparent; }
+  50% { border-color: #6366f1; }
+}
+
+/* Navbar HUD Style */
+.nav-hud {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nav-link-active {
+  position: relative;
+  color: #818cf8 !important;
+}
+
+.nav-link-active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(to right, #6366f1, #a855f7);
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -110,9 +179,9 @@ body::after {
 
 .bento-card:hover {
   background: rgba(15, 23, 42, 0.5);
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 20px rgba(99, 102, 241, 0.1);
-  transform: translateY(-2px);
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 30px rgba(99, 102, 241, 0.15);
+  transform: translateY(-4px) scale(1.01);
 }
 
 /* Floating Input Group */

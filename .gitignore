@@ -8,4 +8,7 @@ coverage/
 !.env.example
 *.sqlite
 *.sqlite-journal
+*.db
+*.db-wal
+*.db-shm
 __pycache__/
