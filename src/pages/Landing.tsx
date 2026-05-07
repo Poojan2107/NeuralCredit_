@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
 import { useAuth } from '../auth';
 import { Brain, Shield, Zap, ChevronRight, Activity, LayoutDashboard } from 'lucide-react';
 

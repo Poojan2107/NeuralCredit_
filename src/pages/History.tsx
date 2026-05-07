@@ -11,6 +11,8 @@ interface HistoryRecord {
     cibil_score: number;
     approved: number;
     probability: number;
+    is_anomaly?: number;
+    anomaly_score?: number;
     created_at: string;
     source: string;
 }

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import Navbar from '../components/Navbar';
 import LoanForm from '../components/LoanForm';
 import { Shield, Brain, TrendingUp, Activity } from 'lucide-react';
 

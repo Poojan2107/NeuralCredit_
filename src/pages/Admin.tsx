@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import Navbar from '../components/Navbar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Shield, 
@@ -35,13 +34,27 @@ interface TrainingResult {
   samples: number;
 }
 
+interface HistoryRecord {
+  id: number;
+  loan_amount: number;
+  annual_income: number;
+  loan_term: number;
+  cibil_score: number;
+  approved: number;
+  probability: number;
+  is_anomaly?: number;
+  anomaly_score?: number;
+  created_at: string;
+  username?: string;
+}
+
 export default function Admin() {
   const [versions, setVersions] = useState<ModelVersion[]>([]);
   const [isTraining, setIsTraining] = useState(false);
   const [lastResult, setLastResult] = useState<TrainingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [reviewQueue, setReviewQueue] = useState<any[]>([]);
+  const [reviewQueue, setReviewQueue] = useState<HistoryRecord[]>([]);
   const [threshold, setThreshold] = useState(0.5);
   const [isUpdatingThreshold, setIsUpdatingThreshold] = useState(false);
 

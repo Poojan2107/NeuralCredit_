@@ -650,7 +650,7 @@ app.get('/api/admin/history', isAuthenticated, isAdmin, (req: Request, res: Resp
     const predictions = db.prepare(`
       SELECT p.*, u.username 
       FROM predictions p 
-      JOIN users u ON p.user_id = u.id 
+      LEFT JOIN users u ON p.user_id = u.id 
       ORDER BY p.created_at DESC
     `).all();
     res.json(predictions);
