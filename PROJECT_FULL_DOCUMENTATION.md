@@ -38,5 +38,16 @@ NeuralCredit goes beyond "Prediction" to "Execution":
 
 ---
 
+## 7. Project Attribution
+**Engineered By:**
+- **ZARVIN**
+- **MANIT**
+- **POOJAN**
+- **VANSH**
+- **KARTIK**
+- **ABHISHEK**
+
+---
+
 **NEURAL_CREDIT // TECHNICAL_SPEC_V2.1**
 **AUTHORITATIVE. PRECISE. SCALABLE.**

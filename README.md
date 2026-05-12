@@ -43,4 +43,15 @@ NeuralCredit implements an **Age-Agnostic Model**. While collecting age for comp
 
 ---
 
+## 👥 Core Development Team
+**Lead Engineers // Neural Systems Division**
+- **ZARVIN**
+- **MANIT**
+- **POOJAN**
+- **VANSH**
+- **KARTIK**
+- **ABHISHEK**
+
+---
+
 **© 2026 NeuralCredit FinTech Solutions // Precision Engineered for Finance**

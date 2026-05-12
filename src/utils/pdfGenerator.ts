@@ -124,9 +124,12 @@ export const generateSanctionLetter = (data: PDFData) => {
   });
 
   // --- Footer ---
+  doc.setFontSize(6);
+  doc.setTextColor(180, 180, 180);
+  const teamLine = "ENGINEERED BY: ZARVIN // MANIT // POOJAN // VANSH // KARTIK // ABHISHEK";
+  doc.text(teamLine, 105, 280, { align: 'center' });
   doc.setFontSize(7);
-  doc.setTextColor(150, 150, 150);
-  doc.text('NEURAL_CREDIT_FINTECH_SOLUTIONS_PRIVATE_LIMITED // 2026', 105, 285, { align: 'center' });
+  doc.text('NEURAL_CREDIT_FINTECH_SOLUTIONS_PRIVATE_LIMITED // 2026', 105, 287, { align: 'center' });
 
   // Save the PDF
   doc.save(`NeuralCredit_Report_${formData.loanAmount}_${Date.now()}.pdf`);
