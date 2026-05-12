@@ -11,7 +11,7 @@ MODEL_PATH = os.path.join(os.getcwd(), 'backend', 'model', 'random_forest_model.
 CSV_PATH = os.path.join(os.getcwd(), 'backend', 'model', 'loan_approval_dataset.csv')
 
 def seed_accurate_data():
-    print("🧠 Starting Accurate AI Seeding Engine...")
+    print("Starting Accurate AI Seeding Engine...")
     
     # 1. Connect to Database
     conn = sqlite3.connect(DB_PATH)
@@ -81,7 +81,7 @@ def seed_accurate_data():
     
     # 5. Add "Deep Insight" Synthetic Data (50 extra rows to show clear AI decisions)
     # This ensures the charts show clear trends for high/low CIBIL tiers
-    print("🔬 Generating Synthetic Logic Markers...")
+    print("Generating Synthetic Logic Markers...")
     for _ in range(50):
         is_high_value = random.random() > 0.5
         
@@ -142,7 +142,7 @@ def seed_accurate_data():
     
     conn.commit()
     conn.close()
-    print(f"✅ Successfully seeded {count} rows with 100% AI Consistency.")
+    print(f"Successfully seeded {count} rows with 100% AI Consistency.")
 
 if __name__ == "__main__":
     seed_accurate_data()
