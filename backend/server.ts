@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { spawn } from 'child_process';
+import { spawn, exec } from 'child_process';
 import { z } from 'zod';
 import fs from 'fs';
 import { Request, Response, NextFunction } from 'express';
@@ -184,7 +184,8 @@ class AuraEngine {
 
     this.process.on('close', () => {
       this.isReady = false;
-      console.log('⚠️ [AURA] Process exited. Model offline.');
+      console.log('⚠️ [AURA] Process exited. Attempting auto-restart in 2s...');
+      setTimeout(() => this.start(), 2000);
     });
   }
 
@@ -557,8 +558,6 @@ app.post('/api/seed', (req, res) => {
     return res.status(401).json({ error: 'Unauthorized. Please log in.' });
   }
 
-  const { exec } = require('child_process');
-  
   exec('npm run seed-ai', (error: any) => {
     if (error) {
       console.error('Seeding failed:', error);

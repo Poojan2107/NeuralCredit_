@@ -24,6 +24,21 @@ export default function Landing() {
                         <span className="text-white"> SCALE.</span>
                     </h1>
 
+                    <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 mb-12 opacity-40 group hover:opacity-100 transition-opacity duration-700">
+                        {[
+                            { label: 'ENGINE_LOAD', value: '14.2%' },
+                            { label: 'MODEL_ACCURACY', value: '98.4%' },
+                            { label: 'Uptime', value: '99.99%' },
+                            { label: 'Nodes', value: '482_ACTIVE' }
+                        ].map((stat, i) => (
+                            <div key={i} className="flex items-center gap-2 font-mono text-[10px] tracking-[0.2em] text-slate-300">
+                                <span className="w-1 h-1 rounded-full bg-indigo-500"></span>
+                                <span className="text-slate-500">{stat.label}:</span>
+                                <span className="text-indigo-400">{stat.value}</span>
+                            </div>
+                        ))}
+                    </div>
+
                     <p className="mt-8 max-w-2xl mx-auto text-base sm:text-lg text-slate-400 font-medium leading-relaxed opacity-80 mb-12">
                         Harness the power of <span className="text-indigo-400">Aura Engine v2.0</span>. A high-fidelity predictive framework utilizing deep-learning micro-patterns for institutional credit governance.
                     </p>

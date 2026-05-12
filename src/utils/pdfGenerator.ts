@@ -1,118 +1,133 @@
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import 'jspdf-autotable';
 
-export const generateSanctionLetter = (result: any, currentPayload: any) => {
-  if (!result || !result.approved) return;
+interface PDFData {
+  formData: any;
+  result: any;
+  timestamp: string;
+}
 
-  const doc = new jsPDF();
+export const generateSanctionLetter = (data: PDFData) => {
+  const { formData, result, timestamp } = data;
+  const doc = new jsPDF() as any;
 
-  // Premium Background / Watermark setup
-  doc.setFillColor(248, 250, 252); // extremely light slate
-  doc.rect(0, 0, doc.internal.pageSize.width, doc.internal.pageSize.height, 'F');
+  // --- Theme Colors ---
+  const PRIMARY_COLOR = [15, 23, 42]; // Slate 900
+  const ACCENT_COLOR = [99, 102, 241]; // Indigo 500
+  const TEXT_COLOR = [51, 65, 85]; // Slate 700
+
+  // --- Header ---
+  doc.setFillColor(...PRIMARY_COLOR);
+  doc.rect(0, 0, 210, 40, 'F');
   
-  doc.setTextColor(230, 230, 240); // very faint
-  doc.setFontSize(80);
-  doc.text("NC_AI_SECURE", 105, 150, { angle: 45, align: "center" });
-
-  // Header Box
-  // --------------------------------------------------
-  doc.setFillColor(15, 23, 42); // slate-900
-  doc.rect(0, 0, doc.internal.pageSize.width, 35, 'F');
-
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.setFont("helvetica", "bold");
-  doc.text("NEURALCREDIT_", 20, 23);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text('NEURAL_CREDIT', 20, 20);
   
   doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(148, 163, 184); // slate-400
-  doc.text("Secured Sanction Document", 140, 22);
+  doc.setFont('helvetica', 'normal');
+  doc.text('INSTITUTIONAL_RISK_GOVERNANCE_REPORT', 20, 28);
+  
+  doc.setDrawColor(...ACCENT_COLOR);
+  doc.setLineWidth(1);
+  doc.line(20, 32, 60, 32);
 
-  // Document Metadata
-  // --------------------------------------------------
-  doc.setTextColor(30, 41, 59);
+  // --- Meta Info ---
+  doc.setTextColor(...TEXT_COLOR);
+  doc.setFontSize(9);
+  doc.text(`REPORT_ID: ${Math.random().toString(36).substring(2, 10).toUpperCase()}`, 140, 15);
+  doc.text(`TIMESTAMP: ${timestamp}`, 140, 20);
+  doc.text(`ENGINE_VER: AURA_V2.1_STABLE`, 140, 25);
+
+  // --- Main Title ---
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.setFontSize(18);
+  doc.text('LOAN_SANCTION_DECISION', 20, 55);
+
+  // --- Result Status Box ---
+  const statusColor = result.approved ? [16, 185, 129] : [244, 63, 94]; // Emerald or Rose
+  doc.setFillColor(...statusColor);
+  doc.roundedRect(20, 65, 170, 25, 3, 3, 'F');
+  
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text(result.approved ? 'DECISION: APPROVED' : 'DECISION: REJECTED', 25, 78);
+  
   doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  const refId = `NC-AI-${Math.floor(Math.random() * 9000000) + 1000000}`;
-  doc.text(`Reference No: ${refId}`, 20, 50);
-  doc.text(`Date of Sanction: ${new Date().toLocaleDateString()}`, 140, 50);
-  doc.setFont("helvetica", "normal");
+  doc.text(`CONFIDENCE_SCORE: ${result.probability.toFixed(2)}%`, 130, 78);
 
-  // Body Paragraph
-  // --------------------------------------------------
-  doc.setTextColor(51, 65, 85);
-  doc.setFontSize(11);
-  doc.text("Dear Applicant,", 20, 65);
-
-  const introText = `We are pleased to inform you that following an algorithmic review by the NeuralCredit_ Intelligence Engine, your application for a personal loan has been provisionally APPROVED with an AI confidence score of ${result.probability.toFixed(0)}%.`;
-  const splitIntro = doc.splitTextToSize(introText, 170);
-  doc.text(splitIntro, 20, 75);
-
-  // Financial Details Table
-  // --------------------------------------------------
-  const tableData = [
-    ["Approved Loan Amount", `INR ${currentPayload.loanAmount.toLocaleString('en-IN')}`],
-    ["Approved Tenure", `${currentPayload.loanTerm} Months`],
-    ["Risk-Based Interest Rate", `${result.insights.interestRate}% p.a.`],
-    ["Equated Monthly Installment (EMI)", `INR ${Math.floor(result.insights.emi).toLocaleString('en-IN')} / month`],
-    ["Verified Applicant CIBIL Score", currentPayload.cibilScore.toString()],
-    ["Verified Annual Income", `INR ${currentPayload.annualIncome.toLocaleString('en-IN')}`]
+  // --- Applicant Details ---
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.setFontSize(12);
+  doc.text('APPLICANT_FINANCIAL_PROFILE', 20, 105);
+  
+  const applicantData = [
+    ['Annual Income', `Rs. ${formData.annualIncome.toLocaleString('en-IN')}`],
+    ['Requested Amount', `Rs. ${formData.loanAmount.toLocaleString('en-IN')}`],
+    ['Loan Term', `${formData.loanTerm} Months`],
+    ['CIBIL Credit Score', formData.cibilScore.toString()],
+    ['Employment Status', formData.selfEmployed === 'Yes' ? 'Self Employed' : 'Salaried'],
+    ['Education Level', formData.education]
   ];
 
-  try {
-    autoTable(doc, {
-      startY: 100,
-      head: [['Sanction Parameter', 'Authorized Value']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontSize: 11, fontStyle: 'bold' },
-      bodyStyles: { fontSize: 10, textColor: 50 },
-      alternateRowStyles: { fillColor: [241, 245, 249] },
-      margin: { left: 20, right: 20 },
-      styles: { cellPadding: 6 }
-    });
-  } catch (atError) {
-    console.error('autoTable failed:', atError);
-    doc.text("Detailed breakdown available online.", 20, 100);
-  }
+  doc.autoTable({
+    startY: 110,
+    head: [['Parameter', 'Value']],
+    body: applicantData,
+    theme: 'grid',
+    headStyles: { fillStyle: 'F', fillColor: PRIMARY_COLOR, textColor: [255, 255, 255], fontStyle: 'bold' },
+    styles: { fontSize: 9, cellPadding: 4 },
+    margin: { left: 20, right: 20 }
+  });
 
-  // Signatures
-  // --------------------------------------------------
-  let finalY = 200; 
-  try {
-    finalY = (doc as any).lastAutoTable?.finalY || 200;
-  } catch (e) {
-    console.warn('Could not determine lastAutoTable.finalY', e);
-  }
+  // --- Asset Portfolio ---
+  const nextY = (doc as any).lastAutoTable.finalY + 15;
+  doc.text('ASSET_PORTFOLIO_SUMMARY', 20, nextY);
 
-  doc.setFontSize(10);
-  doc.setTextColor(30, 41, 59);
-  doc.text("System Authorized By:", 20, finalY + 30);
+  const assetData = [
+    ['Residential Equity', `Rs. ${formData.residentialAssets.toLocaleString('en-IN')}`],
+    ['Commercial Assets', `Rs. ${formData.commercialAssets.toLocaleString('en-IN')}`],
+    ['Luxury Holdings', `Rs. ${formData.luxuryAssets.toLocaleString('en-IN')}`],
+    ['Bank Liquid Capital', `Rs. ${formData.bankAssets.toLocaleString('en-IN')}`]
+  ];
+
+  doc.autoTable({
+    startY: nextY + 5,
+    head: [['Asset Type', 'Evaluated Market Value']],
+    body: assetData,
+    theme: 'striped',
+    headStyles: { fillColor: [71, 85, 105], textColor: [255, 255, 255] },
+    styles: { fontSize: 9, cellPadding: 4 },
+    margin: { left: 20, right: 20 }
+  });
+
+  // --- AI Insights / Terms ---
+  const finalY = (doc as any).lastAutoTable.finalY + 15;
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.setFontSize(12);
+  doc.text('NEURAL_LOGIC_INSIGHTS', 20, finalY);
   
-  // Hex/Cryptographic signature mock
-  doc.setFont("courier", "bold");
-  doc.setTextColor(99, 102, 241);
-  doc.text(`[0x${Math.random().toString(16).substr(2, 8).toUpperCase()}_NC_CORE]`, 20, finalY + 40);
-  
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(30, 41, 59);
-  doc.text("Applicant Signature:", 140, finalY + 30);
-  doc.text("_________________________", 140, finalY + 40);
-
-  // Footer Disclaimer
-  // --------------------------------------------------
   doc.setFontSize(8);
-  doc.setTextColor(148, 163, 184); // slate-400
-  const disclaimer = "CONFIDENTIALITY NOTICE: This is an electronically generated and validated document. This document is intended as a demonstration of software architecture. It does not constitute a legal or binding contract.";
-  const splitDisclaimer = doc.splitTextToSize(disclaimer, 170);
+  doc.setTextColor(...TEXT_COLOR);
+  const terms = [
+    "* Decision generated via Aura RF-Classifier Node NC-482.",
+    "* Interest rate of " + result.interestRate + "% calculated via dynamic yield optimization.",
+    "* EMI projection: Rs. " + result.emi.toLocaleString('en-IN') + " per month.",
+    "* Anomaly score: " + result.anomaly_score + (result.is_anomaly ? " (High Risk Flagged)" : " (Nominal)"),
+    "* This is a computer-generated report and does not require a physical signature."
+  ];
   
-  // Bottom Box
-  doc.setFillColor(15, 23, 42); // slate-900
-  doc.rect(0, 275, doc.internal.pageSize.width, 22, 'F');
-  
-  doc.setTextColor(255, 255, 255);
-  doc.text(splitDisclaimer, 20, 282);
+  terms.forEach((term, i) => {
+    doc.text(term, 20, finalY + 8 + (i * 5));
+  });
 
-  doc.save(`NeuralCredit_Sanction_${refId}.pdf`);
+  // --- Footer ---
+  doc.setFontSize(7);
+  doc.setTextColor(150, 150, 150);
+  doc.text('NEURAL_CREDIT_FINTECH_SOLUTIONS_PRIVATE_LIMITED // 2026', 105, 285, { align: 'center' });
+
+  // Save the PDF
+  doc.save(`NeuralCredit_Report_${formData.loanAmount}_${Date.now()}.pdf`);
 };

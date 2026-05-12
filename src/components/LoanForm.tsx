@@ -5,8 +5,7 @@ import { IndianRupee, Briefcase, Calendar, Calculator, Info, CheckCircle, AlertC
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
 import { useAuth } from '../auth';
-import DocumentScanner from './DocumentScanner';
-import IdentityScanner from './IdentityScanner';
+
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { generateSanctionLetter } from '../utils/pdfGenerator';
 import CustomSelect from './CustomSelect';
@@ -107,7 +106,7 @@ export default function LoanForm() {
   const [synced, setSynced] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showScanner, setShowScanner] = useState(false);
+
   const { user } = useAuth();
   const [showOfflineModalOverride, setShowOfflineModalOverride] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
@@ -154,12 +153,7 @@ export default function LoanForm() {
     y.set(0);
   };
 
-  const handleScanComplete = (data: any) => {
-    if (data.annualIncome) {
-      setFormData(prev => ({ ...prev, annualIncome: data.annualIncome }));
-    }
-    setTimeout(() => setShowScanner(false), 2000);
-  };
+
 
   const handleBankSync = () => {
     setIsSyncing(true);
@@ -226,7 +220,6 @@ export default function LoanForm() {
   };
 
   const startPrediction = async () => {
-    setShowScanner(false);
     setLoading(true);
     setResult(null);
 
@@ -323,7 +316,7 @@ export default function LoanForm() {
       setShowOfflineModalOverride(true);
       return;
     }
-    setShowScanner(true);
+    startPrediction();
   };
 
   return (
@@ -354,15 +347,6 @@ export default function LoanForm() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {showScanner && (
-          <IdentityScanner 
-            onVerified={startPrediction} 
-            onCancel={() => setShowScanner(false)} 
-          />
-        )}
-      </AnimatePresence>
-
       {apiError && (
         <motion.div
           initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
@@ -375,38 +359,6 @@ export default function LoanForm() {
           </div>
         </motion.div>
       )}
-
-      <div className="flex items-center justify-between mb-8">
-        
-        <button
-          onClick={() => setShowScanner(!showScanner)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
-            showScanner 
-              ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' 
-              : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/20'
-          }`}
-        >
-          <Scan className="h-4 w-4" />
-          {showScanner ? 'ABORT_SCAN' : 'AUTO_VERIFY'}
-        </button>
-      </div>
-
-      <AnimatePresence>
-        {showScanner && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="mb-8 overflow-hidden"
-          >
-            <DocumentScanner onScanComplete={handleScanComplete} />
-            <div className="mt-4 flex items-center gap-2 text-[10px] font-mono text-slate-500 bg-slate-900/50 p-2 rounded-lg border border-white/5">
-              <Zap className="h-3 w-3 text-amber-500" />
-              ACCELERATED_DATA_ENTRY_ACTIVE: UPLOAD DOCUMENTS TO AUTO-POPULATE FIELDS
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-100 transition-opacity">
 
@@ -520,8 +472,8 @@ export default function LoanForm() {
                     options={[{ label: 'Graduate', value: 'Graduate' }, { label: 'Not Graduate', value: 'Not Graduate' }]}
                   />
                   <CustomSelect 
-                    label="Employment" name="selfEmployed" value={coFormData.selfEmployed} icon={Briefcase} onChange={handleCoChange}
-                    options={[{ label: 'Salaried', value: 'No' }, { label: 'Self Employed', value: 'Yes' }]}
+                    label="Employment Status" name="selfEmployed" value={coFormData.selfEmployed} icon={Briefcase} onChange={handleCoChange}
+                    options={[{ label: 'Salaried Employee', value: 'No' }, { label: 'Self Employed Entity', value: 'Yes' }]}
                   />
                 </div>
               </div>
@@ -674,7 +626,11 @@ export default function LoanForm() {
                 {result.approved && (
                   <div className="shrink-0 mt-4 md:mt-0 flex justify-center w-full md:w-auto">
                     <button
-                      onClick={() => generateSanctionLetter(result, result.finalPayload || formData)}
+                      onClick={() => generateSanctionLetter({
+                        result,
+                        formData: result.finalPayload || formData,
+                        timestamp: new Date().toLocaleString()
+                      })}
                       className="flex items-center gap-3 px-6 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold rounded-xl shadow-[0_0_30px_rgba(52,211,153,0.4)] transition-all hover:scale-105"
                     >
                       <Download className="h-5 w-5" />

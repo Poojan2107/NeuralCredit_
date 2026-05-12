@@ -277,6 +277,15 @@ export default function Admin() {
                 {isTraining ? 'Optimizing Weights...' : 'Retrain Now'}
               </button>
 
+              {isTraining && (
+                <div className="mt-4 p-4 bg-black/40 rounded-xl border border-indigo-500/30 font-mono text-[9px] text-indigo-400/80 overflow-hidden">
+                  <div className="animate-pulse">» INITIALIZING_TRAINING_PIPELINE...</div>
+                  <div className="opacity-60">» LOADING_4270_RECORDS...</div>
+                  <div className="opacity-40">» GENERATING_100_TREES...</div>
+                  <div className="opacity-20">» COMPUTING_GINI_IMPURITY...</div>
+                </div>
+              )}
+
               <AnimatePresence>
                 {lastResult && (
                   <motion.div
