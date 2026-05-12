@@ -242,6 +242,8 @@ export default function LoanForm() {
       finalPayload.annualIncome = formData.annualIncome + coFormData.annualIncome;
       finalPayload.cibilScore = Math.floor((formData.cibilScore + coFormData.cibilScore) / 2);
       finalPayload.residentialAssets = formData.residentialAssets + coFormData.residentialAssets;
+      finalPayload.commercialAssets = formData.commercialAssets + coFormData.commercialAssets;
+      finalPayload.luxuryAssets = formData.luxuryAssets + coFormData.luxuryAssets;
       finalPayload.bankAssets = formData.bankAssets + coFormData.bankAssets;
     }
 
@@ -488,6 +490,8 @@ export default function LoanForm() {
                   <FieldInput label="Income Vector (₹)" name="annualIncome" value={coFormData.annualIncome} icon={IndianRupee} onChange={handleCoChange} />
                   <FieldInput label="CIBIL Base Score" name="cibilScore" value={coFormData.cibilScore} icon={Activity} onChange={handleCoChange} />
                   <FieldInput label="Res. Assets (₹)" name="residentialAssets" value={coFormData.residentialAssets} icon={Building2} onChange={handleCoChange} />
+                  <FieldInput label="Comm. Assets (₹)" name="commercialAssets" value={coFormData.commercialAssets} icon={Building} onChange={handleCoChange} />
+                  <FieldInput label="Lux. Assets (₹)" name="luxuryAssets" value={coFormData.luxuryAssets} icon={Gem} onChange={handleCoChange} />
                   <FieldInput label="Bank Assets (₹)" name="bankAssets" value={coFormData.bankAssets} icon={Landmark} onChange={handleCoChange} />
                 </div>
               </div>

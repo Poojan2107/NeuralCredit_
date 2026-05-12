@@ -40,7 +40,7 @@ export default function Landing() {
                     </div>
 
                     <p className="mt-8 max-w-2xl mx-auto text-base sm:text-lg text-slate-400 font-medium leading-relaxed opacity-80 mb-12">
-                        Harness the power of <span className="text-indigo-400">Aura Engine v2.0</span>. A high-fidelity predictive framework utilizing deep-learning micro-patterns for institutional credit governance.
+                        Harness the power of <span className="text-indigo-400">Aura Engine v2.1</span>. A high-fidelity predictive framework utilizing deep-learning micro-patterns for institutional credit governance.
                     </p>
 
                     <div className="flex flex-col sm:flex-row justify-center gap-6">
@@ -114,7 +114,7 @@ export default function Landing() {
 
             <footer className="py-8 border-t border-white/5 bg-slate-950/50 backdrop-blur-xl mt-auto">
                 <div className="max-w-7xl mx-auto px-4 text-center">
-                    <p className="text-slate-400 text-sm font-mono">&copy; 2026 Loan Prediction Engine v2.0</p>
+                    <p className="text-slate-400 text-sm font-mono">&copy; 2026 NeuralCredit FinTech Solutions v2.1</p>
                     <p className="text-slate-500 text-xs mt-2 font-mono">Precision Engineered for Finance</p>
                 </div>
             </footer>

@@ -455,7 +455,7 @@ app.get('/api/health', (req, res) => {
 app.post('/api/predict', isAuthenticated, async (req: Request, res: Response) => {
 
   const ip = req.ip || 'unknown';
-  if (!checkRateLimit(`predict:${ip}`, 30, 60 * 1000)) {
+  if (!checkRateLimit(`predict:${ip}`, 60, 60 * 1000)) {
     return res.status(429).json({ error: 'Too many prediction requests. Please slow down.' });
   }
 
