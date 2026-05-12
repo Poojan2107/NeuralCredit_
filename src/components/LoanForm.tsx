@@ -224,12 +224,21 @@ export default function LoanForm() {
     setResult(null);
 
     const validation = loanSchema.safeParse(formData);
-    if (!validation.success) {
+    const coValidation = hasCoApplicant ? loanSchema.safeParse(coFormData) : { success: true };
+
+    if (!validation.success || (hasCoApplicant && !coValidation.success)) {
       const errors: Record<string, string> = {};
-      validation.error.issues.forEach((issue) => {
-        const field = issue.path[0] as string;
-        if (!errors[field]) errors[field] = issue.message;
-      });
+      if (!validation.success) {
+        validation.error.issues.forEach((issue) => {
+          const field = issue.path[0] as string;
+          if (!errors[field]) errors[field] = issue.message;
+        });
+      }
+      if (hasCoApplicant && !coValidation.success) {
+        // We'll mark co-applicant errors as well, though the UI currently primarily highlights primary
+        // For simplicity in this demo, we'll just block submission and log
+        console.warn('Co-Applicant validation failed');
+      }
       setFieldErrors(errors);
       setLoading(false);
       return;
@@ -633,7 +642,9 @@ export default function LoanForm() {
                       onClick={() => generateSanctionLetter({
                         result,
                         formData: result.finalPayload || formData,
-                        timestamp: new Date().toLocaleString()
+                        timestamp: new Date().toLocaleString(),
+                        userName: user?.name || 'Authorized Applicant',
+                        isJoint: hasCoApplicant
                       })}
                       className="flex items-center gap-3 px-6 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold rounded-xl shadow-[0_0_30px_rgba(52,211,153,0.4)] transition-all hover:scale-105"
                     >

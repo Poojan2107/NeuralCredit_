@@ -5,10 +5,12 @@ interface PDFData {
   formData: any;
   result: any;
   timestamp: string;
+  userName: string;
+  isJoint: boolean;
 }
 
 export const generateSanctionLetter = (data: PDFData) => {
-  const { formData, result, timestamp } = data;
+  const { formData, result, timestamp, userName, isJoint } = data;
   const doc = new jsPDF() as any;
 
   // --- Theme Colors ---
@@ -64,7 +66,9 @@ export const generateSanctionLetter = (data: PDFData) => {
   doc.text('APPLICANT_FINANCIAL_PROFILE', 20, 105);
   
   const applicantData = [
-    ['Annual Income', `Rs. ${formData.annualIncome.toLocaleString('en-IN')}`],
+    ['Primary Applicant', userName.toUpperCase()],
+    ['Application Type', isJoint ? 'JOINT_ENFORCEMENT' : 'SINGLE_ENTITY'],
+    ['Annual Income (Combined)', `Rs. ${formData.annualIncome.toLocaleString('en-IN')}`],
     ['Requested Amount', `Rs. ${formData.loanAmount.toLocaleString('en-IN')}`],
     ['Loan Term', `${formData.loanTerm} Months`],
     ['CIBIL Credit Score', formData.cibilScore.toString()],
