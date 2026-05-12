@@ -10,6 +10,7 @@ import HistoryPage from './pages/History';
 import Admin from './pages/Admin';
 import SystemBoot from './components/SystemBoot';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import DigitalGrid from './components/DigitalGrid.tsx';
 
 function PrivateRoute({ children }: { children: React.ReactElement }) {
@@ -80,6 +81,7 @@ export default function App() {
               />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
+            <Footer />
           </div>
         </div>
       </Router>
